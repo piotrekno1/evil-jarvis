@@ -26,6 +26,7 @@ import click
 
 from evil_jarvis.microphone import DetectorConfig, VoiceActivityRecorder
 from evil_jarvis.paths import MODELS_DIR, PROJECT_ROOT
+from evil_jarvis.persona import load_persona
 from evil_jarvis.persona.checks import normalize_text
 from evil_jarvis.stt.faster_whisper import FasterWhisperTranscriber
 from evil_jarvis.stt.mlx_whisper import MlxWhisperTranscriber
@@ -175,7 +176,10 @@ class FasterWhisperBackend:
 
         # CPU on purpose: the labels below say "CPU int8", and results stay comparable.
         self._transcriber = FasterWhisperTranscriber(
-            str(model_dir), "pl", topic_hint=clown_pl().asr_hint, device="cpu"
+            str(model_dir),
+            "pl",
+            topic_hint=load_persona("clown").profile("pl").asr_hint,
+            device="cpu",
         )
 
     def transcribe(self, wav_path: str) -> str:

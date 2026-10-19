@@ -7,7 +7,6 @@ The reply checks themselves are in checks.py.
 
 from __future__ import annotations
 
-import random
 import re
 import tomllib
 import unicodedata
@@ -15,7 +14,7 @@ from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
 
-from evil_jarvis.persona.checks import CHECKS, normalize_text
+from evil_jarvis.persona.checks import CHECKS
 
 DEFAULT_PERSONA = "clown"
 LANGUAGE_NAMES = {"pl": "Polish", "en": "English", "de": "German", "fr": "French", "es": "Spanish"}
