@@ -1,300 +1,157 @@
-# Creepy Clown
+<p align="center"><img src="assets/logo.jpg" alt="Evil Jarvis logo" width="200"></p>
 
-A local Python prototype for a Halloween clown that listens for any nearby
-voice, transcribes it offline, creates a short in-character response with a
-local model, and speaks it. Microphone audio is ignored while the clown speaks,
-so it cannot trigger itself.
+# Evil Jarvis
 
-This is a desktop interaction prototype, not an iPhone deployment. Once the
-timing and character feel right, the same state machine can be implemented in
-Swift with Apple's Speech, Foundation Models, and AVFoundation frameworks.
+Turn a Halloween prop into a character that talks back. Put a microphone and a
+speaker inside it, and visitors can have a conversation with it. Everything runs
+on your own machine, so there is no cloud service or account to set up.
 
-## Demo: Polish speech in, Polish voice out
+Characters live in TOML files where you set the personality, example lines,
+voice and effects. Two come built in, and both speak Polish and English:
 
-```bash
-brew install portaudio ffmpeg
-uv sync --extra models --extra polish-voice
-./demo.sh            # talk to the clown (deep Piper voice)
-./demo.sh demon      # metallic-demon voice
-./demo.sh text       # type instead of talking
-./demo.sh silent     # talk, replies printed only
-./demo.sh --help     # all options
-```
+- `clown`: a creepy clown
+- `jarvis`: a sinister smart-home assistant
 
-Pipeline: Whisper large-v3-turbo (Apple GPU) → Bielik 4.5B → Piper `pl_PL-bass-high`,
-with an optional metallic effect. `demo.sh` checks the model files and prints the
-download command for anything missing. The Piper voice is fetched with:
+## Requirements
+
+- Apple Silicon Mac, or Linux with an NVIDIA GPU (CPU-only works, slowly)
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/)
+- PortAudio and ffmpeg: `brew install portaudio ffmpeg` or `sudo apt install libportaudio2 ffmpeg`
+
+## Install
 
 ```bash
-mkdir -p models/piper
-for ext in onnx onnx.json; do
-  curl -L -o models/piper/pl_PL-bass-high.$ext \
-    https://huggingface.co/rhasspy/piper-voices/resolve/main/pl/pl_PL/bass/high/pl_PL-bass-high.$ext
-done
+uv sync --extra models --extra voice
 ```
 
-Useful knobs: `--voice-effect clean|metallic|metallic-demon`, `--piper-speed 1.15`,
-`--voice pl_PL-darkman-medium`, `--prosody maniacal|plain`, `--memory-seconds 90`.
-
-The default `maniacal` intonation splits each reply at punctuation and speaks every
-phrase with its own random pitch, speed and loudness (giddy jumps, rushed bursts,
-sudden whispers, a shouted ending on "!"), with uneven pauses and extra Piper
-timing variation. The Polish prompt also asks Bielik for exclamations, trailing
-"..." and the odd "hehe", which the intonation follows. `benchmarks/tts_pl_samples.py` renders every voice
-and effect to `samples/polish-voices/` for side-by-side listening.
-
-## Interaction loop
-
-```text
-LISTENING -> RECORDING -> TRANSCRIBING -> GENERATING -> SPEAKING -> COOLDOWN
-     ^                                                               |
-     +---------------------------------------------------------------+
-```
-
-- Ambient noise is measured once at startup.
-- About 250 ms of sustained sound starts an utterance.
-- About 900 ms of silence ends it.
-- Utterances shorter than 300 ms are discarded.
-- Microphone audio is ignored during speech playback (the stream stays open; restarting it can deadlock CoreAudio).
-- Audio and transcripts are not retained (unless WildEdge capture is turned on; see below).
-
-## Quick start: timing test without AI
-
-The scripted mode only needs NumPy, PortAudio, and `sounddevice`. On macOS:
+On Linux, rebuild llama.cpp with CUDA. faster-whisper uses the GPU when CUDA and
+cuDNN are installed (versions in its README), and falls back to Whisper `small`
+on the CPU otherwise.
 
 ```bash
-brew install portaudio
-uv sync
-uv run creepy-clown --scripted
+CMAKE_ARGS="-DGGML_CUDA=on" uv sync --extra models --extra voice --reinstall-package llama-cpp-python
 ```
 
-Say something after the `Listening...` message. Press Control-C to stop.
-
-Use `--list-devices` if Python selects the wrong microphone. A specific input
-device can be selected with `--input-device 2`.
-
-## Full offline mode
-
-Install the optional model backends:
+Then download the models and voices, about 6 GB into `models/`:
 
 ```bash
-uv sync --extra models
+uv run evil-jarvis --download
 ```
 
-Download the two model files once. These commands store them inside the
-git-ignored `models/` directory:
+`--download` fetches what the given options need and then checks the setup.
+Pass the options you plan to run with, for example
+`--persona jarvis --language auto --download`, so their voices come too.
+`--check` runs only the check.
+
+## Usage
+
+Start the default character, the clown. It listens on the default microphone
+and answers through the default speaker:
 
 ```bash
-uv run --extra models hf download mlx-community/whisper-large-v3-turbo \
-  --local-dir models/whisper-large-v3-turbo-mlx
-
-uv run --extra models hf download speakleash/Bielik-4.5B-v3.0-Instruct-GGUF \
-  Bielik-4.5B-v3.0-Instruct.Q8_0.gguf --local-dir models
+uv run evil-jarvis
 ```
 
-Then start the complete offline pipeline:
+Pick another character:
 
 ```bash
-uv run --extra models creepy-clown --voice Zosia
+uv run evil-jarvis --persona jarvis
 ```
 
-Replies come from Bielik 4.5B (a Polish-trained model) by default; pass
-`--llm-model PATH` to try another GGUF model. Add `--no-speech` to print replies
-instead of speaking them, and `--text-only` to type instead of talking.
-
-Speech recognition defaults to Whisper large-v3-turbo on the Apple GPU
-(`--transcriber mlx`). In the 2026-10-17 benchmark it picked the right reply
-for 97% of 60 Polish clips at about 0.6 s per clip. Transcripts that loop,
-are impossibly long for the clip, or contain non-Latin script are discarded as
-Whisper hallucinations. The previous CPU recognizer is still available with
-`--transcriber whisper --whisper-model "$PWD/models/whisper-small-ct2"`.
-
-The clown expects Polish by default; fixing the language makes recognition a
-little faster and more predictable. Use `--language en` for English or
-`--language auto` to let Whisper detect the visitor's language.
-
-### Test Apple's on-device speech recognition
-
-On an Apple Silicon Mac, select the Apple transcriber. The first run builds a
-tiny native helper and asks for Speech Recognition permission. This mode sets
-`requiresOnDeviceRecognition`, so it fails instead of silently using a network
-recognizer when the Polish on-device recognizer is unavailable.
+Answer in whichever language each visitor speaks, instead of only the
+persona's language:
 
 ```bash
-uv sync --extra models
-
-uv run --extra models creepy-clown \
-  --transcriber apple \
-  --language pl \
-  --llm-model "$PWD/models/Qwen3-4B-Q4_K_M.gguf" \
-  --voice Zosia
+uv run evil-jarvis --language auto
 ```
 
-No `--whisper-model` is needed in Apple mode. Switch back to
-`--transcriber whisper` to compare it with the existing recognizer.
-
-On the development Mac tested on 2026-10-02, the native API successfully
-transcribed the English control sample but reported that forced on-device
-recognition was unavailable for `pl_PL`. Keep Whisper selected for offline
-Polish on this Mac; availability can differ by OS, device, and installed speech
-assets.
-The Whisper path must be a local CTranslate2-format model directory accepted by
-`faster-whisper`. The LLM must be a local GGUF instruct model accepted by
-`llama-cpp-python`. The supplied Mac prototype uses a quantized 4B model; the
-eventual iPhone build will use Apple's on-device Foundation Model instead.
-
-Polish replies are generated by the model from a Polish prompt with a few
-style examples. Each reply is checked (length, English, foreign characters,
-emoji, stage directions, echoing the visitor, copying an example) and
-regenerated up to three times; if every attempt fails, the clown stays silent.
-The log line `Reply source:` shows where each reply came from. The earlier
-keyword-matched handwritten lines remain available with `--curated-polish`.
-
-The clown remembers the last 6 exchanges, so follow-up questions work ("A ile
-masz lat?" after "Jak masz na imię?"). The memory is cleared once nobody has
-spoken for 90 s, so the next group starts fresh; change this with
-`--memory-seconds 300`, or turn memory off with `--memory-seconds 0`. Replies that
-repeat an earlier reply (or start with the same three words) are regenerated.
-
-Useful options:
-
-```text
---language pl             default; `en` for English, `auto` to detect it
---voice Zosia             installed Polish macOS voice
---speech-rate 145         words per minute
---plain-voice             disable the creepy pitch and echo effects
---silence-ms 900          silence that ends an utterance
---max-utterance-seconds 10
---cooldown-seconds 1.0
---debug                    print detector levels
-```
-
-For English, `Reed` generally sounds less clinical than `Samantha` with the
-creepy effect chain:
-
-```text
---language en --voice Reed --speech-rate 135
-```
-
-The effect uses a mild pitch reduction, a quiet lower shadow voice, and subtle
-room echo. It intentionally avoids strong tremolo, which emphasizes the robotic
-quality of macOS speech synthesis.
-
-For substantially more natural English speech, use the optional local Kokoro
-neural voice. Its model downloads once and is then cached for offline use:
+Try a persona without a microphone or speaker. You type lines and the replies
+are printed:
 
 ```bash
-uv sync --extra models --extra neural-voice
-
-uv run --extra models --extra neural-voice creepy-clown \
-  --transcriber apple \
-  --language en \
-  --llm-model "$PWD/models/Qwen3-4B-Q4_K_M.gguf" \
-  --tts kokoro \
-  --voice am_fenrir \
-  --kokoro-speed 0.98 \
-  --voice-effect possessed
+uv run evil-jarvis --text-only --no-speech
 ```
 
-Try `am_puck` for a lighter, more chaotic character. Kokoro is English-only in
-this prototype; Polish continues to use the system voice. Faster delivery and
-punctuation-driven pauses make these voices sound more like a live performer
-than the earlier slow audiobook-style preset.
+Each run prints which models, devices and voices it uses. Ctrl-C quits.
 
-`--voice-effect possessed` keeps the natural voice in front while adding a
-pitch-lowered double, a quiet crushed "mask" layer, chorus, and short echoes.
-Use `--voice-effect demonic` for two deeper shadow voices, stronger low
-resonance, unstable movement, and a longer room tail. Use `--voice-effect
-subtle` for a mostly natural voice, or `--plain-voice` for clean Kokoro output.
+The most useful options are below. `uv run evil-jarvis --help` lists all of them.
 
-For a text-only model and voice test, use:
+| Option | Purpose |
+|---|---|
+| `--persona NAME\|FILE` | Built-in persona or a `.toml` path. `--list-personas` lists them. |
+| `--language CODE` | `pl`, `en`, ... or `auto`. Default from the persona. |
+| `--voice`, `--voice-effect`, `--prosody`, `--piper-speed` | Override the persona's voice. Effects: `clean`, `metallic`, `metallic-demon`. Prosody: `plain`, `maniacal`. |
+| `--llm-model PATH` | Any GGUF instruct model. |
+| `--stt-engine` | `mlx` (Apple GPU) or `faster-whisper`. Chosen automatically. |
+| `--memory-seconds N` | Conversation memory, cleared after N seconds of silence. Default 90, `0` disables it. |
+| `--input-device`, `--output-device` | Audio devices. `--list-devices` lists them. |
+| `--silence-ms`, `--threshold-multiplier` | Voice detection tuning. |
+| `--env-file PATH` | Environment file. Default `.env` in the project. |
+
+## Personas
+
+Copy `src/evil_jarvis/persona/builtin/clown.toml`, which documents every
+setting, and run it with `--persona path/to/file.toml`. Unknown settings are
+rejected when the file loads.
+
+```toml
+name = "witch"
+display_name = "Witch"
+language = "en"
+
+[voice]
+voice = "en_US-lessac-high"       # any Piper voice in models/piper
+effect = "metallic"
+prosody = "plain"
+
+[voice.by_language]               # optional voice per language
+pl = "pl_PL-darkman-medium"
+
+[languages.default]               # required, used for languages without their own section
+system_prompt = "You are a witch..."
+examples = [{ visitor = "Who are you?", reply = "Your next ingredient." }]
+attempts = 3                      # regenerate rejected replies, then stay silent
+max_words = 25
+checks = ["no_symbols", "no_stage_directions", "no_echo", "no_repeat"]
+```
+
+Available checks: `latin_only`, `no_symbols`, `no_stage_directions`,
+`not_english`, `no_echo`, `no_echo_opening`, `no_example_copy`, `no_repeat`. Empty replies are
+always rejected.
+
+## Telemetry
+
+Off by default. To send metrics to [WildEdge](https://wildedge.dev), set
+`WILDEDGE_DSN` in `.env`:
 
 ```bash
-uv run --extra models creepy-clown --text-only \
-  --llm-model "$PWD/models/Qwen3-4B-Q4_K_M.gguf" \
-  --language pl --voice Zosia
+echo 'WILDEDGE_DSN=...' > .env
 ```
 
-The macOS voice effect is only a prototype. Its pitch, layering, filtering, and
-echo stages map directly to AVAudioEngine nodes in the eventual iPhone app;
-the final iOS build will not depend on `say`, `ffmpeg`, or `afplay`.
-
-## Telemetry (WildEdge)
-
-Optional performance telemetry goes to [WildEdge](https://wildedge.dev). It is
-off unless `WILDEDGE_DSN` is set, so tests and offline use need nothing.
-
-```bash
-uv sync --extra models --extra polish-voice --extra telemetry
-echo 'WILDEDGE_DSN=https://<secret>@ingest.wildedge.dev/<key>' > .env   # git-ignored
-./demo.sh                     # demo.sh loads .env and the telemetry extra
-```
-
-Each visitor exchange becomes one trace: `exchange` → `transcribe` (Whisper
-inference) → `reply` (one Bielik inference per attempt) → `speak` (Piper ONNX
-inference). All exchanges from one start share a `run_id`; one group of visitors
-(until the 90 s memory resets) shares a `conversation_id`. Recorded:
-
-- model load times, Whisper and Bielik latency, Bielik tokens and tokens/s, Piper latency
-- `response_latency_ms`: from the visitor going quiet to the clown starting to speak
-- outcome per exchange: `spoke`, `silent` (every reply failed the checks),
-  `no_words`, or `discarded` (Whisper hallucination)
-- reply source, attempts and rejection reasons (`English`, `too long`, ...)
-- Mac hardware snapshots every 30 s
-
-By default no visitor content leaves the machine: no audio, transcripts or
-replies. To collect real examples (e.g. to build an evaluation set), opt in
-explicitly:
-
-```bash
-./demo.sh -- --wildedge-capture text    # transcripts, prompts and replies
-./demo.sh -- --wildedge-capture audio   # also each visitor's voice clip (WAV)
-```
-
-Only this flag turns capture on; `WILDEDGE_ATTACHMENTS_ENABLED` in the
-environment is ignored. With capture on, the visitor notice must say that
-speech is recorded and uploaded. Attachments are uploaded every few seconds; any
-left when the clown stops are kept on disk and sent at the next start.
-
-Bielik calls are tracked by creepy-clown itself rather than the SDK's `gguf`
-integration, which (as of wildedge-sdk 0.2.2) does not see
-`create_chat_completion`. Do not add `wildedge run --integrations gguf`; if it
-is active, the manual tracking switches itself off to avoid double counting.
+By default it sends only timings, token counts, model metadata and outcomes.
+`--wildedge-capture text` also uploads transcripts and replies, and `audio` also
+uploads voice clips. If you capture, tell visitors they are being recorded.
 
 ## Development
 
-The project pins Python 3.12 in `.python-version`, and `uv.lock` records the
-complete dependency resolution. Run the dependency-free test suite with:
-
 ```bash
-uv run python -m unittest discover -s tests -v
+uv run python -m unittest discover -s tests
+uv run ruff format .
+uv run ruff check --fix .
 ```
 
-## Practical setup
+Tests need no models or audio devices. Ruff settings are in `pyproject.toml`.
+Layout:
 
-Place the microphone opening where fabric and foam do not cover it. Keep the
-computer powered, disable sleep and notifications, and start the program before
-the attraction opens. The threshold adapts to the measured room noise, but the
-`--threshold-multiplier` option can make it more or less sensitive.
-
-Even though processing is local and nothing is saved, put up a notice telling
-visitors that the clown listens and generates replies.
-
-## Polish speech-to-text benchmark
-
-Compares Whisper (small, large-v3-turbo on CPU and on the Apple GPU) with
-Cactus Whistle on your own recordings. Clips stay in the git-ignored
-`recordings/` folder.
-
-```bash
-uv sync --extra models --extra asr-bench
-uv run --extra asr-bench clown-asr-bench record --speaker ania            # 30 scripted lines
-uv run --extra asr-bench clown-asr-bench record --speaker kid1 --free     # unscripted; you type what was said
-uv run --extra asr-bench clown-asr-bench record --speaker ania --condition noise
-uv run --extra asr-bench clown-asr-bench compare
+```text
+src/evil_jarvis/
+  cli.py           options and wiring
+  conversation.py  listen, transcribe, reply, speak
+  stt/             speech to text (mlx-whisper, faster-whisper)
+  llm/             replies (llama.cpp)
+  tts/             Piper voices, effects, prosody, playback
+  persona/         persona loading, reply checks, built-in personas
+  bench/asr.py     speech recognition benchmark (jarvis-asr-bench)
 ```
 
-`compare` prints and saves a summary to `benchmarks/asr/results/`. "Right
-intent" is what matters for this attraction: whether the keyword router picks
-the correct reply category from the transcript. Whistle's anonymous usage
-telemetry is disabled by the benchmark.
+`benchmarks/` holds model comparisons and voice sample scripts.

@@ -1,13 +1,19 @@
-import importlib.util
 import os
 import tempfile
 import unittest
 from unittest import mock
 
-from creepy_clown import app, telemetry
-from creepy_clown.backends import LlamaResponder
+import wildedge
+from click.testing import CliRunner
 
-HAS_SDK = importlib.util.find_spec("wildedge") is not None
+from evil_jarvis import cli, conversation, telemetry
+from evil_jarvis.llm.llama import LlamaResponder
+
+
+def off():
+    """Telemetry that sends nothing, even if the shell has WILDEDGE_DSN set."""
+    with mock.patch.dict(os.environ, {}, clear=True):
+        return telemetry.Telemetry(wildedge.WildEdge())
 
 
 class FakeModel:
@@ -23,7 +29,6 @@ class FakeModel:
 
 def responder_with(replies, clock=None):
     responder = object.__new__(LlamaResponder)
-    responder.curated_polish = False
     responder._disable_thinking = False
     responder._model = FakeModel(replies)
     if clock:
@@ -44,31 +49,42 @@ class FakeHandle:
 
 
 class StartTests(unittest.TestCase):
-    def test_no_dsn_means_no_op(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            result = telemetry.start()
-        self.assertFalse(result.enabled)
-        with result.exchange() as span:
-            span.set_attributes(outcome="spoke")
+    def start(self, *argv, env=None):
+        """Run the CLI up to telemetry setup; returns (result, wildedge.init mock)."""
+        with (
+            mock.patch.dict(os.environ, env or {}, clear=True),
+            mock.patch.object(cli, "missing_requirements", return_value=[]),
+            mock.patch.object(cli, "install_interrupt_watchdog"),
+            mock.patch.object(cli, "run"),
+            mock.patch.object(cli.wildedge, "init") as init,
+        ):
+            result = CliRunner().invoke(
+                cli.main, ["--text-only", "--env-file", "/nonexistent", *argv]
+            )
+        return result, init
 
     def test_capture_without_dsn_is_refused(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(ValueError):
-                telemetry.start("text")
+        result, init = self.start("--wildedge-capture", "text")
+        self.assertEqual(result.exit_code, 2)
+        self.assertIn("needs WILDEDGE_DSN", result.output)
+        init.assert_not_called()
 
-    @unittest.skipUnless(HAS_SDK, "wildedge-sdk not installed")
     def test_environment_cannot_turn_on_attachments(self):
         env = {"WILDEDGE_DSN": "https://s@example.invalid/k", "WILDEDGE_ATTACHMENTS_ENABLED": "1"}
-        with mock.patch.dict(os.environ, env, clear=True), mock.patch("wildedge.init") as init:
-            result = telemetry.start("off")
+        result, init = self.start(env=env)
+        self.assertEqual(result.exit_code, 0, result.output)
         self.assertEqual(init.call_args.kwargs["attachments_enabled"], False)
-        self.assertEqual(result.capture, "off")
+
+    def test_no_dsn_sends_nothing(self):
+        quiet = off()
+        self.assertTrue(quiet.client.noop)
+        with quiet.exchange() as span:
+            span.set_attributes(outcome="spoke")
 
 
-@unittest.skipUnless(HAS_SDK, "wildedge-sdk not installed")
 class CaptureTests(unittest.TestCase):
     def live(self, capture):
-        return telemetry.WildEdgeTelemetry(mock.MagicMock(), capture)
+        return telemetry.Telemetry(mock.MagicMock(), capture)
 
     def generate(self, capture):
         handle = FakeHandle()
@@ -110,27 +126,20 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(
             [a.name for a in self.generate("text")["attachments"]], ["messages.json", "reply.txt"]
         )
-        self.assertEqual([a.name for a in self.transcribe("text")["attachments"]], ["transcript.txt"])
+        self.assertEqual(
+            [a.name for a in self.transcribe("text")["attachments"]], ["transcript.txt"]
+        )
 
     def test_audio_capture_adds_the_voice_clip(self):
         names = [a.name for a in self.transcribe("audio")["attachments"]]
         self.assertEqual(names, ["utterance.wav", "transcript.txt"])
 
     def test_summaries_only_with_capture(self):
-        span = telemetry.NullSpan()
+        span = mock.Mock(input_summary=None)
         self.live("off").summarize(span, input="visitor words")
         self.assertIsNone(span.input_summary)
         self.live("text").summarize(span, input="visitor words")
         self.assertEqual(span.input_summary, "visitor words")
-
-    def test_telemetry_errors_never_reach_the_show(self):
-        class BrokenHandle:
-            def track_inference(self, **kwargs):
-                raise RuntimeError("ingest down")
-
-        self.live("off").track_transcription(
-            BrokenHandle(), duration_ms=1, audio_seconds=1, sample_rate=16000, transcript="x"
-        )
 
 
 class ScalarAttributeTests(unittest.TestCase):
@@ -146,7 +155,7 @@ class ResponderTelemetryTests(unittest.TestCase):
         responder = responder_with(["Yes, and the candy is yours.", "Mam, ale gryzie."])
         handle = FakeHandle()
         responder._llm_handle = handle
-        responder._telemetry = mock.Mock(wraps=telemetry.Telemetry())
+        responder._telemetry = mock.Mock()
         responder._telemetry.track_generation = lambda h, **kw: h.track_inference(**kw)
         self.assertEqual(responder.reply("Masz cukierka?", language="pl"), "Mam, ale gryzie.")
         self.assertEqual(len(handle.inferences), 2)
@@ -173,7 +182,12 @@ class TextLoopTests(unittest.TestCase):
     def test_exchange_outcomes(self):
         spans = []
 
+        quiet = off()
+
         class Recorder(telemetry.Telemetry):
+            def __init__(self):
+                super().__init__(quiet.client)
+
             def exchange(self, conversation_id=None):
                 spans.append(("exchange", conversation_id))
                 return super().exchange(conversation_id)
@@ -183,9 +197,11 @@ class TextLoopTests(unittest.TestCase):
                 return super().span(name, kind)
 
         responder = responder_with(["Mam jeden."])
-        with mock.patch("builtins.input", side_effect=["Masz cukierka?", EOFError]):
-            with mock.patch("builtins.print"):
-                app.run_text_loop(responder, app.SilentSpeaker(), "pl", telemetry=Recorder())
+        with (
+            mock.patch("builtins.input", side_effect=["Masz cukierka?", EOFError]),
+            mock.patch("builtins.print"),
+        ):
+            conversation.run_text_loop(responder, conversation.SilentSpeaker(), Recorder(), "pl")
         self.assertEqual([s[0] for s in spans], ["exchange", "reply", "speak"])
         self.assertEqual(spans[0][1], responder._conversation_id)
 

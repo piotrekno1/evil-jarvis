@@ -3,41 +3,103 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "creepy-clown"
+name = "evil-jarvis"
 version = "0.1.0"
-description = "Offline, hands-free voice-clown interaction prototype"
+description = "Offline, hands-free voice characters: swap personas, voices and prompts"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "click>=8.1",
   "numpy>=1.26",
+  "python-dotenv>=1.0",
   "sounddevice>=0.4.7",
+  "wildedge-sdk>=0.2.1",
 ]
 
 [project.optional-dependencies]
+# Speech recognition and the LLM. MLX Whisper only exists for Apple Silicon;
+# everywhere else faster-whisper does the same job (on an NVIDIA GPU when present).
 models = [
   "av<19",
   "faster-whisper>=1.1.0",
   "llama-cpp-python>=0.3.7",
-  "mlx-whisper>=0.4.3",
+  "mlx-whisper>=0.4.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
-neural-voice = [
-    "kokoro-mlx>=0.1.2",
-]
-polish-voice = [
+# Piper voices, for every language.
+voice = [
   "piper-tts>=1.8.0",
 ]
 asr-bench = [
   "av<19",
   "faster-whisper>=1.1.0",
   "cactus-needle>=3.2.4",
-  "mlx-whisper>=0.4.3",
-]
-telemetry = [
-    "wildedge-sdk>=0.2.1",
+  "mlx-whisper>=0.4.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 [project.scripts]
-creepy-clown = "creepy_clown.app:main"
-clown-asr-bench = "creepy_clown.asr_bench:main"
+evil-jarvis = "evil_jarvis.cli:main"
+jarvis-asr-bench = "evil_jarvis.bench.asr:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"evil_jarvis.persona" = ["builtin/*.toml"]
+
+[dependency-groups]
+dev = ["ruff>=0.17"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "benchmarks"]
+extend-exclude = ["models", "recordings", ".build"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # import sorting
+  "UP",       # modern syntax for the target Python
+  "B",        # likely bugs
+  "C4",       # comprehensions
+  "SIM",      # simpler code
+  "RET",      # return statements
+  "PIE",      # unnecessary code
+  "PTH",      # pathlib over os.path
+  "N",        # naming
+  "PL",       # pylint, including imports at the top (PLC0415) and magic values (PLR2004)
+  "PERF",     # performance
+  "RUF",      # ruff-specific
+  "TID",      # tidy imports
+  "TID253",   # banned top-level imports (list below); not part of "TID"
+  "ISC",      # implicit string concatenation
+]
+ignore = [
+  "PLR0913",  # too many arguments: pipeline steps take several parts; PLR0917 still limits positional ones
+]
+allowed-confusables = ["–"]  # en dash, as in "1–2 short sentences"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004"]  # expected values in assertions
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"  # absolute imports: `from evil_jarvis.wav import ...`
+# Imported inside the function that needs them, never at the top of a module:
+# optional extras, and sounddevice, which fails to import without PortAudio.
+banned-module-level-imports = [
+  "ctranslate2",
+  "faster_whisper",
+  "huggingface_hub",
+  "kokoro_mlx",
+  "llama_cpp",
+  "mlx_whisper",
+  "needle",
+  "piper",
+  "sounddevice",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["evil_jarvis"]

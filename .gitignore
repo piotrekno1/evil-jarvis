@@ -12,3 +12,6 @@ recordings/
 .build/
 *.egg-info/
 .env
+
+# macOS
+.DS_Store

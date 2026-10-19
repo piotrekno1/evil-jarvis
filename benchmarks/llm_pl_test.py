@@ -7,15 +7,20 @@ Writes a Markdown report next to this file for a native speaker to judge.
 
 from __future__ import annotations
 
-from datetime import datetime
-from pathlib import Path
+import os
 import re
 import sys
 import time
+from datetime import datetime
+from pathlib import Path
 
-from creepy_clown.backends import POLISH_STYLE_EXAMPLES as EXAMPLES  # noqa: E402
-from creepy_clown.backends import POLISH_SYSTEM_PROMPT as SYSTEM_PROMPT_PL  # noqa: E402
-from creepy_clown.backends import polish_reply_problem  # noqa: E402
+from evil_jarvis.persona import load_persona
+
+# Set PERSONA=jarvis (or a path to a .toml) to test another character.
+PROFILE = load_persona(os.environ.get("PERSONA", "clown")).profile("pl")
+EXAMPLES = PROFILE.examples
+SYSTEM_PROMPT_PL = PROFILE.system_prompt
+polish_reply_problem = PROFILE.reply_problem
 
 # The first three are the prompts from benchmarks/2026-10-02-model-comparison.md.
 VISITOR_LINES = [
@@ -37,7 +42,10 @@ SAMPLES_PER_LINE = 2
 def build_messages(visitor: str) -> list[dict]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT_PL}]
     for question, answer in EXAMPLES:
-        messages += [{"role": "user", "content": question}, {"role": "assistant", "content": answer}]
+        messages += [
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": answer},
+        ]
     messages.append({"role": "user", "content": visitor})
     return messages
 
@@ -83,8 +91,10 @@ def main() -> None:
     report = [
         f"# Polish reply test, {datetime.now():%Y-%m-%d %H:%M}",
         "",
-        "Polish system prompt plus five Polish example turns; temperature 0.7, "
-        f"max 60 tokens, {SAMPLES_PER_LINE} replies per line, Apple GPU (Metal).",
+        (
+            "Polish system prompt plus five Polish example turns; temperature 0.7, "
+            f"max 60 tokens, {SAMPLES_PER_LINE} replies per line, Apple GPU (Metal)."
+        ),
         "",
     ]
     for path in paths:
@@ -95,8 +105,10 @@ def main() -> None:
         report += [
             f"## {path.name} ({path.stat().st_size / 1e9:.1f} GB)",
             "",
-            f"Load {load_seconds:.1f}s · median reply {times[len(times) // 2]:.2f}s · "
-            f"{tokens / sum(times):.0f} tokens/s overall",
+            (
+                f"Load {load_seconds:.1f}s · median reply {times[len(times) // 2]:.2f}s · "
+                f"{tokens / sum(times):.0f} tokens/s overall"
+            ),
             "",
             "| Visitor | Reply | s |",
             "|---|---|---|",
