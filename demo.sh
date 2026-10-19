@@ -10,6 +10,10 @@
 # Anything after "--" is passed straight to creepy-clown, for example:
 #   ./demo.sh demon -- --piper-speed 1.15 --input-device 2
 #   ./demo.sh -- --prosody plain           (calm, even intonation)
+#
+# WildEdge telemetry turns on when .env (git-ignored) sets WILDEDGE_DSN.
+# Only timings and metadata are sent; upload visitor text or voice with
+#   ./demo.sh -- --wildedge-capture text   (or audio)
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -25,7 +29,7 @@ while [[ $# -gt 0 ]]; do
     text) mode="text" ;;
     silent) mode="silent" ;;
     --) shift; extra=("$@"); break ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
     *) echo "Unknown option: $1 (try ./demo.sh --help)"; exit 2 ;;
   esac
   shift
@@ -48,6 +52,16 @@ need models/piper/pl_PL-bass-high.onnx \
 command -v ffmpeg >/dev/null || { echo "Missing ffmpeg: brew install ffmpeg"; missing=1; }
 [[ $missing -eq 0 ]] || exit 1
 
+extras=(--extra models --extra polish-voice)
+telemetry="off (set WILDEDGE_DSN in .env to send timings to WildEdge)"
+if [[ -f .env ]]; then
+  set -a; . ./.env; set +a
+fi
+if [[ -n "${WILDEDGE_DSN:-}" ]]; then
+  extras+=(--extra telemetry)
+  telemetry="WildEdge (timings and metadata only, unless --wildedge-capture is passed)"
+fi
+
 args=(--voice-effect "$effect")
 case "$mode" in
   text) args+=(--text-only) ;;
@@ -60,8 +74,9 @@ cat <<EOF
   hearing : $( [[ $mode == text ]] && echo "typed text (Polish)" || echo "Whisper large-v3-turbo (Apple GPU), Polish" )
   thinking: Bielik 4.5B
   voice   : $( [[ $mode == silent ]] && echo "off (replies printed)" || echo "Piper bass, $effect, maniacal intonation" )
+  metrics : $telemetry
   input   : $( [[ $mode == text ]] && echo "type a line and press Enter (Ctrl-D quits)" || echo "microphone — stay quiet 2 s for calibration, then speak" )
 
 EOF
 
-exec uv run --extra models --extra polish-voice creepy-clown "${args[@]}" "${extra[@]+"${extra[@]}"}"
+exec uv run "${extras[@]}" creepy-clown "${args[@]}" "${extra[@]+"${extra[@]}"}"

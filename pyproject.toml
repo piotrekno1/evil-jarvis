@@ -32,6 +32,9 @@ asr-bench = [
   "cactus-needle>=3.2.4",
   "mlx-whisper>=0.4.3",
 ]
+telemetry = [
+    "wildedge-sdk>=0.2.1",
+]
 [project.scripts]
 creepy-clown = "creepy_clown.app:main"
 clown-asr-bench = "creepy_clown.asr_bench:main"

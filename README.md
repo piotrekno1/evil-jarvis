@@ -56,7 +56,7 @@ LISTENING -> RECORDING -> TRANSCRIBING -> GENERATING -> SPEAKING -> COOLDOWN
 - About 900 ms of silence ends it.
 - Utterances shorter than 300 ms are discarded.
 - Microphone audio is ignored during speech playback (the stream stays open; restarting it can deadlock CoreAudio).
-- Audio and transcripts are not retained.
+- Audio and transcripts are not retained (unless WildEdge capture is turned on; see below).
 
 ## Quick start: timing test without AI
 
@@ -218,6 +218,48 @@ uv run --extra models creepy-clown --text-only \
 The macOS voice effect is only a prototype. Its pitch, layering, filtering, and
 echo stages map directly to AVAudioEngine nodes in the eventual iPhone app;
 the final iOS build will not depend on `say`, `ffmpeg`, or `afplay`.
+
+## Telemetry (WildEdge)
+
+Optional performance telemetry goes to [WildEdge](https://wildedge.dev). It is
+off unless `WILDEDGE_DSN` is set, so tests and offline use need nothing.
+
+```bash
+uv sync --extra models --extra polish-voice --extra telemetry
+echo 'WILDEDGE_DSN=https://<secret>@ingest.wildedge.dev/<key>' > .env   # git-ignored
+./demo.sh                     # demo.sh loads .env and the telemetry extra
+```
+
+Each visitor exchange becomes one trace: `exchange` → `transcribe` (Whisper
+inference) → `reply` (one Bielik inference per attempt) → `speak` (Piper ONNX
+inference). All exchanges from one start share a `run_id`; one group of visitors
+(until the 90 s memory resets) shares a `conversation_id`. Recorded:
+
+- model load times, Whisper and Bielik latency, Bielik tokens and tokens/s, Piper latency
+- `response_latency_ms`: from the visitor going quiet to the clown starting to speak
+- outcome per exchange: `spoke`, `silent` (every reply failed the checks),
+  `no_words`, or `discarded` (Whisper hallucination)
+- reply source, attempts and rejection reasons (`English`, `too long`, ...)
+- Mac hardware snapshots every 30 s
+
+By default no visitor content leaves the machine: no audio, transcripts or
+replies. To collect real examples (e.g. to build an evaluation set), opt in
+explicitly:
+
+```bash
+./demo.sh -- --wildedge-capture text    # transcripts, prompts and replies
+./demo.sh -- --wildedge-capture audio   # also each visitor's voice clip (WAV)
+```
+
+Only this flag turns capture on; `WILDEDGE_ATTACHMENTS_ENABLED` in the
+environment is ignored. With capture on, the visitor notice must say that
+speech is recorded and uploaded. Attachments are uploaded every few seconds; any
+left when the clown stops are kept on disk and sent at the next start.
+
+Bielik calls are tracked by creepy-clown itself rather than the SDK's `gguf`
+integration, which (as of wildedge-sdk 0.2.2) does not see
+`create_chat_completion`. Do not add `wildedge run --integrations gguf`; if it
+is active, the manual tracking switches itself off to avoid double counting.
 
 ## Development
 

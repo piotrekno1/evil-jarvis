@@ -479,6 +479,9 @@ neural-voice = [
 polish-voice = [
     { name = "piper-tts" },
 ]
+telemetry = [
+    { name = "wildedge-sdk" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -494,8 +497,9 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "piper-tts", marker = "extra == 'polish-voice'", specifier = ">=1.8.0" },
     { name = "sounddevice", specifier = ">=0.4.7" },
+    { name = "wildedge-sdk", marker = "extra == 'telemetry'", specifier = ">=0.2.1" },
 ]
-provides-extras = ["models", "neural-voice", "polish-voice", "asr-bench"]
+provides-extras = ["models", "neural-voice", "polish-voice", "asr-bench", "telemetry"]
 
 [[package]]
 name = "csvw"
@@ -3125,6 +3129,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ce/e5/e272bb9a045105a1fdf4b798d8086f5932a178f4d738f17a74f5c9e0ae9a/weasel-1.0.0.tar.gz", hash = "sha256:7b129b44c90cc543b760532974ca1e4eb30dad2aa2026f57bdce66354ae610fc", size = 38682, upload-time = "2026-03-20T08:10:25.266Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0a/07/57ebf7a6798b016c064bd0ca81b4c6a99daa4dc377b898bc7b41eb6b5af0/weasel-1.0.0-py3-none-any.whl", hash = "sha256:89518acee027f49d743126c3502d35e6dd14f5768be5c37c9af47c171b6005cc", size = 50713, upload-time = "2026-03-20T08:10:23.637Z" },
+]
+
+[[package]]
+name = "wildedge-sdk"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/2d/e233d9f649e13b55b44d3214409105fbf4d98656d3826b4a3bab2055d5c0/wildedge_sdk-0.2.2.tar.gz", hash = "sha256:3f18e44d7ed22b50482c33d1f397d6a045351bb41e57b4ad0b5e824709efeef1", size = 186103, upload-time = "2026-09-30T10:07:39.498Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/d9/663d32d6a1449b40a4edb8e7fb7b473dd766a641de619ff6c11c61a19f5c/wildedge_sdk-0.2.2-py3-none-any.whl", hash = "sha256:a38b7817f37262fbe967f883fe163f69dc97c9b54a8a4bcf36a0a9171f0a6a68", size = 129958, upload-time = "2026-09-30T10:07:38.029Z" },
 ]
 
 [[package]]

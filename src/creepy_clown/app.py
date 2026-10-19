@@ -11,6 +11,8 @@ import time
 
 from pathlib import Path
 
+from . import __version__
+from . import telemetry as wildedge_telemetry
 from .audio import DetectorConfig, VoiceActivityRecorder, write_wav
 from .backends import (
     AppleSpeechTranscriber,
@@ -161,6 +163,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-utterance-seconds", type=float, default=10.0)
     parser.add_argument("--cooldown-seconds", type=float, default=1.0)
     parser.add_argument("--threshold-multiplier", type=float, default=3.0)
+    parser.add_argument(
+        "--wildedge-capture",
+        choices=wildedge_telemetry.CAPTURE_LEVELS,
+        default="off",
+        help="WildEdge upload of visitor content (needs WILDEDGE_DSN): off (default, "
+        "timings and metadata only), text (transcripts and replies), audio (also voice clips)",
+    )
     parser.add_argument("--debug", action="store_true")
     return parser
 
@@ -172,7 +181,37 @@ class SilentSpeaker:
         del text
 
 
-def run_text_loop(responder, speaker, language: str | None = None) -> None:
+NO_TELEMETRY = wildedge_telemetry.Telemetry()
+
+
+def conversation_of(responder) -> str | None:
+    upcoming = getattr(responder, "upcoming_conversation_id", None)
+    return upcoming() if upcoming else None
+
+
+def respond_and_speak(text, language, responder, speaker, telemetry, exchange, started) -> None:
+    """Generate the clown's reply to `text` and speak it, inside one exchange trace."""
+    with telemetry.span("reply", kind="agent_step") as span:
+        reply = responder.reply(text, language=language)
+        info = getattr(responder, "last_reply_info", None) or {}
+        span.set_attributes(language=language, **wildedge_telemetry.scalar_attributes(info))
+        telemetry.summarize(span, input=text, output=reply)
+    if not reply:
+        print("Clown> (silent: no usable reply)")
+        exchange.set_attributes(outcome="silent")
+        return
+    print(f"Clown> {reply}")
+    exchange.set_attributes(
+        outcome="spoke", response_latency_ms=round((time.perf_counter() - started) * 1000)
+    )
+    if not isinstance(speaker, SilentSpeaker):
+        LOG.info("Speaking (microphone paused)...")
+    with telemetry.span("speak") as span:
+        span.set_attributes(reply_chars=len(reply), speaker=type(speaker).__name__)
+        speaker.speak(reply)
+
+
+def run_text_loop(responder, speaker, language: str | None = None, telemetry=NO_TELEMETRY) -> None:
     while True:
         try:
             text = input("Visitor> ").strip()
@@ -181,15 +220,22 @@ def run_text_loop(responder, speaker, language: str | None = None) -> None:
             return
         if not text:
             continue
-        reply = responder.reply(text, language=language)
-        if not reply:
-            print("Clown> (silent: no usable reply)")
-            continue
-        print(f"Clown> {reply}")
-        speaker.speak(reply)
+        started = time.perf_counter()
+        with telemetry.exchange(conversation_of(responder)) as exchange:
+            exchange.set_attributes(input="text")
+            respond_and_speak(text, language, responder, speaker, telemetry, exchange, started)
 
 
-def run_voice_loop(args, responder, speaker) -> None:
+def transcriber_model(args) -> tuple[str, str]:
+    """WildEdge model id and format for the selected speech recognizer."""
+    if args.transcriber == "mlx":
+        return Path(args.whisper_model or DEFAULT_MLX_MODEL).name, "mlx"
+    if args.transcriber == "apple":
+        return f"apple-speech-{args.language}", "apple-speech"
+    return Path(args.whisper_model).name, "ctranslate2"
+
+
+def run_voice_loop(args, responder, speaker, telemetry=NO_TELEMETRY) -> None:
     if not args.scripted and args.transcriber == "whisper" and not args.whisper_model:
         raise SystemExit("--whisper-model is required unless --scripted is selected")
 
@@ -211,39 +257,76 @@ def run_voice_loop(args, responder, speaker) -> None:
     if isinstance(device, str) and device.isdigit():
         device = int(device)
     recorder = VoiceActivityRecorder(config, input_device=device)
+    asr_handle = telemetry.register_transcriber(*transcriber_model(args)) if transcriber else None
 
     while True:
         samples = recorder.capture()
         if samples is None:
             continue
+        started = time.perf_counter()  # the visitor just stopped talking
+        audio_seconds = len(samples) / config.sample_rate
 
-        if transcriber is None:
-            text = "Someone spoke nearby."
-        else:
-            LOG.info("Transcribing...")
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as wav_file:
-                wav_path = wav_file.name
-            try:
-                write_wav(wav_path, samples, config.sample_rate)
-                text = transcriber.transcribe(wav_path)
-            finally:
-                os.unlink(wav_path)
+        with telemetry.exchange(conversation_of(responder)) as exchange:
+            exchange.set_attributes(input="voice", audio_seconds=round(audio_seconds, 2))
+            if transcriber is None:
+                text = "Someone spoke nearby."
+            else:
+                LOG.info("Transcribing...")
+                text = transcribe(
+                    transcriber, samples, config.sample_rate, telemetry, asr_handle, audio_seconds
+                )
 
-        if not text:
-            LOG.info("No words recognized; returning to listening")
-            continue
-        print(f"Visitor> {text}")
-        LOG.info("Generating response...")
-        reply_language = transcriber.last_language if transcriber else args.language
-        reply = responder.reply(text, language=reply_language)
-        if not reply:
-            print("Clown> (silent: no usable reply)")
-            continue
-        print(f"Clown> {reply}")
-        if not args.no_speech:
-            LOG.info("Speaking (microphone paused)...")
-        speaker.speak(reply)
+            if not text:
+                LOG.info("No words recognized; returning to listening")
+                discarded = getattr(transcriber, "last_discarded", False)
+                exchange.set_attributes(outcome="discarded" if discarded else "no_words")
+                continue
+            print(f"Visitor> {text}")
+            LOG.info("Generating response...")
+            reply_language = transcriber.last_language if transcriber else args.language
+            respond_and_speak(
+                text, reply_language, responder, speaker, telemetry, exchange, started
+            )
         time.sleep(args.cooldown_seconds)
+
+
+def transcribe(transcriber, samples, sample_rate, telemetry, handle, audio_seconds) -> str:
+    with telemetry.span("transcribe") as span:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as wav_file:
+            wav_path = wav_file.name
+        try:
+            write_wav(wav_path, samples, sample_rate)
+            began = time.perf_counter()
+            try:
+                text = transcriber.transcribe(wav_path)
+            except Exception as exc:
+                telemetry.track_transcription(
+                    handle,
+                    duration_ms=round((time.perf_counter() - began) * 1000),
+                    audio_seconds=audio_seconds,
+                    sample_rate=sample_rate,
+                    transcript="",
+                    error=exc,
+                )
+                raise
+            telemetry.track_transcription(
+                handle,
+                duration_ms=round((time.perf_counter() - began) * 1000),
+                audio_seconds=audio_seconds,
+                sample_rate=sample_rate,
+                transcript=text,
+                language=transcriber.last_language,
+                wav_path=wav_path,  # read only when audio capture is on
+            )
+        finally:
+            os.unlink(wav_path)
+        span.set_attributes(
+            language=transcriber.last_language,
+            words=len(text.split()),
+            discarded=getattr(transcriber, "last_discarded", False),
+        )
+        telemetry.summarize(span, output=text)
+    return text
 
 
 def main() -> None:
@@ -277,6 +360,16 @@ def main() -> None:
             )
 
     try:
+        # Before any model is created: the onnx integration (Piper) patches at load time.
+        telemetry = wildedge_telemetry.start(
+            args.wildedge_capture,
+            integrations=["onnx"] if args.tts == "piper" and not args.no_speech else [],
+            app_version=__version__,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    try:
         responder = (
             ScriptedResponder()
             if args.scripted
@@ -284,6 +377,7 @@ def main() -> None:
                 args.llm_model,
                 curated_polish=args.curated_polish,
                 memory_seconds=args.memory_seconds,
+                telemetry=telemetry,
             )
         )
         if args.no_speech:
@@ -309,13 +403,15 @@ def main() -> None:
                 args.voice, args.speech_rate, creepy=not args.plain_voice
             )
         if args.text_only:
-            run_text_loop(responder, speaker, language=args.language)
+            run_text_loop(responder, speaker, language=args.language, telemetry=telemetry)
         else:
-            run_voice_loop(args, responder, speaker)
+            run_voice_loop(args, responder, speaker, telemetry=telemetry)
     except KeyboardInterrupt:
         print("\nThe clown has gone back to sleep.")
     except (RuntimeError, ValueError) as exc:
         parser.error(str(exc))
+    finally:
+        telemetry.close()
 
 
 if __name__ == "__main__":

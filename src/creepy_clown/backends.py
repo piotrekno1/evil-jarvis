@@ -12,6 +12,9 @@ import tempfile
 import time
 from typing import Protocol
 import unicodedata
+import uuid
+
+from .telemetry import Telemetry
 
 LOG = logging.getLogger(__name__)
 
@@ -327,6 +330,7 @@ class MlxWhisperTranscriber:
         self._path = str(path)
         self._language = None if language in (None, "auto") else language
         self.last_language: str | None = self._language
+        self.last_discarded = False
 
     def warm_up(self) -> None:
         """Load the weights now so the first visitor does not wait ~3 s."""
@@ -351,7 +355,8 @@ class MlxWhisperTranscriber:
         )
         text = str(result.get("text", "")).strip()
         self.last_language = result.get("language") or self._language
-        if is_runaway_transcript(text, len(samples) / rate, self.last_language):
+        self.last_discarded = is_runaway_transcript(text, len(samples) / rate, self.last_language)
+        if self.last_discarded:
             LOG.info("Discarding a runaway transcript: %r", text[:80])
             return ""
         return text
@@ -457,8 +462,19 @@ class LlamaResponder:
     clock = staticmethod(time.monotonic)
     _history: tuple[tuple[str, str], ...] = ()
     _last_heard: float | None = None
+    _conversation_id: str | None = None
+    _next_conversation_id: str | None = None
+    _telemetry = Telemetry()
+    _llm_handle = None
+    last_reply_info: dict | None = None
 
-    def __init__(self, model_path: str, curated_polish: bool = False, memory_seconds: float = 90.0):
+    def __init__(
+        self,
+        model_path: str,
+        curated_polish: bool = False,
+        memory_seconds: float = 90.0,
+        telemetry: Telemetry | None = None,
+    ):
         self.curated_polish = curated_polish
         self.memory_seconds = memory_seconds
         path = Path(model_path).expanduser()
@@ -468,6 +484,7 @@ class LlamaResponder:
             from llama_cpp import Llama
         except ImportError as exc:
             raise RuntimeError("Install the 'models' extra to use the local LLM") from exc
+        started = time.perf_counter()
         self._model = Llama(
             model_path=str(path),
             n_ctx=2048,
@@ -475,6 +492,10 @@ class LlamaResponder:
             n_gpu_layers=-1,  # llama-cpp-python defaults to CPU only; offload all layers to Metal
             verbose=False,
         )
+        if telemetry is not None:
+            self._telemetry = telemetry
+            load_ms = round((time.perf_counter() - started) * 1000)
+            self._llm_handle = telemetry.register_llm(self._model, load_ms)
         self._disable_thinking = "qwen3" in path.name.lower()
 
     @staticmethod
@@ -506,14 +527,31 @@ class LlamaResponder:
             reply = reply[len(transcript) :].lstrip(" \t\r\n:—–-.,!?\"")
         return reply.strip()
 
+    def _starts_new_conversation(self, now: float) -> bool:
+        if self._last_heard is None or self.memory_seconds <= 0:
+            return True
+        return now - self._last_heard > self.memory_seconds
+
+    def _pending_conversation_id(self) -> str:
+        if self._next_conversation_id is None:
+            self._next_conversation_id = uuid.uuid4().hex[:12]
+        return self._next_conversation_id
+
+    def upcoming_conversation_id(self) -> str:
+        """The conversation the next reply belongs to; a new group gets a new id."""
+        if self._starts_new_conversation(self.clock()) or self._conversation_id is None:
+            return self._pending_conversation_id()
+        return self._conversation_id
+
     def _recall(self) -> tuple[tuple[str, str], ...]:
         """Return recent exchanges, forgetting them after a quiet spell (a new group)."""
         now = self.clock()
-        quiet = self._last_heard is not None and now - self._last_heard > self.memory_seconds
-        if quiet or self.memory_seconds <= 0:
+        if self._starts_new_conversation(now) or self._conversation_id is None:
             if self._history:
                 LOG.info("Memory cleared after %.0f s of quiet", now - (self._last_heard or now))
             self._history = ()
+            self._conversation_id = self._pending_conversation_id()
+            self._next_conversation_id = None
         self._last_heard = now
         return self._history
 
@@ -535,8 +573,39 @@ class LlamaResponder:
             ]
         return messages
 
+    def _complete(self, messages: list[dict[str, str]], **params) -> dict:
+        """Run one chat completion and report it to telemetry."""
+        started = time.perf_counter()
+        try:
+            result = self._model.create_chat_completion(messages=messages, **params)
+        except Exception as exc:
+            self._telemetry.track_generation(
+                self._llm_handle,
+                duration_ms=round((time.perf_counter() - started) * 1000),
+                messages=messages,
+                params=params,
+                error=exc,
+            )
+            raise
+        self._telemetry.track_generation(
+            self._llm_handle,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            messages=messages,
+            params=params,
+            result=result,
+        )
+        return result
+
+    def _note(self, **details) -> dict:
+        """Record how the current reply was made (for telemetry span attributes)."""
+        if self.last_reply_info is None:
+            self.last_reply_info = {}
+        self.last_reply_info.update(details)
+        return self.last_reply_info
+
     def reply(self, text: str, language: str | None = None) -> str:
         history = self._recall()
+        self.last_reply_info = {"history_turns": len(history)}
         reply = self._reply(text, language, history)
         self._remember(text, reply)
         return reply
@@ -560,7 +629,8 @@ class LlamaResponder:
         if self._disable_thinking:
             user_message = f"/no_think\n{user_message}"
 
-        result = self._model.create_chat_completion(
+        self._note(source="model", attempts=1)
+        result = self._complete(
             messages=[
                 {"role": "system", "content": f"{SYSTEM_PROMPT}\n{language_rule}"},
                 *self._history_messages(history),
@@ -583,8 +653,10 @@ class LlamaResponder:
         if curated:
             intent, reply = curated
             LOG.info("Reply source: curated line (intent %s)", intent)
+            self._note(source="curated", intent=intent)
             return reply
         LOG.info("Reply source: curated generic fallback")
+        self._note(source="curated-fallback")
         return random.choice(POLISH_FALLBACK_RESPONSES)
 
     def _generate_polish(self, text: str, history=()) -> str:
@@ -596,8 +668,11 @@ class LlamaResponder:
         user_message = f"/no_think\n{text}" if self._disable_thinking else text
         messages.append({"role": "user", "content": user_message})
 
+        rejections: list[str] = []
+        info = self._note(source="model", rejections=rejections)
         for attempt in range(1, self.POLISH_ATTEMPTS + 1):
-            result = self._model.create_chat_completion(
+            info["attempts"] = attempt
+            result = self._complete(
                 messages=messages,
                 temperature=0.7,
                 top_p=0.9,
@@ -612,7 +687,9 @@ class LlamaResponder:
                 LOG.info("Reply source: model (attempt %d)", attempt)
                 return reply
             LOG.info("Rejected model reply (%s): %r", problem, reply[:80])
+            rejections.append(problem)
         LOG.warning("No usable reply after %d attempts; staying silent", self.POLISH_ATTEMPTS)
+        info["source"] = "silent"
         return ""
 
 
