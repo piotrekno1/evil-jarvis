@@ -1,0 +1,301 @@
+backend,file,speaker,condition,intent,reference,hypothesis,word_errors,ref_words,ref_route,hyp_route,seconds
+whisper-small,peter/quiet/c1.wav,peter,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka.,0,4,candy,candy,1.068
+whisper-small,peter/quiet/c2.wav,peter,quiet,candy,Cukierek albo psikus!,cukierek albo psikus,0,3,none,none,1.107
+whisper-small,peter/quiet/c3.wav,peter,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,1.161
+whisper-small,peter/quiet/h1.wav,peter,quiet,hands,Pokaż mi swoje ręce.,Pokaż mi swoje ręce.,0,4,hands,hands,1.06
+whisper-small,peter/quiet/h2.wav,peter,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,1.08
+whisper-small,peter/quiet/i1.wav,peter,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,1.034
+whisper-small,peter/quiet/i2.wav,peter,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,1.054
+whisper-small,peter/quiet/f1.wav,peter,quiet,fear,Boję się ciebie.,Boję się Ciebie.,0,3,fear,fear,1.051
+whisper-small,peter/quiet/f2.wav,peter,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,1.083
+whisper-small,peter/quiet/f3.wav,peter,quiet,fear,Nie strasz mnie!,Nie strasz w nie.,2,3,fear,fear,1.065
+whisper-small,peter/quiet/p1.wav,peter,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,1.07
+whisper-small,peter/quiet/p2.wav,peter,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,1.064
+whisper-small,peter/quiet/p3.wav,peter,quiet,presence,Odezwij się!,Odezwij się.,0,2,presence,presence,1.068
+whisper-small,peter/quiet/g1.wav,peter,quiet,greeting,"Cześć, klaunie!","Cześć, klaunie!",0,2,greeting,greeting,1.073
+whisper-small,peter/quiet/g2.wav,peter,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,1.066
+whisper-small,peter/quiet/g3.wav,peter,quiet,greeting,"Hej, co słychać?","Hej, co słuchacz?",1,3,greeting,greeting,1.078
+whisper-small,peter/quiet/s1.wav,peter,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,1.095
+whisper-small,peter/quiet/s2.wav,peter,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,1.102
+whisper-small,peter/quiet/a1.wav,peter,quiet,alive,Czy ty żyjesz?,Czy Ty żyjesz?,0,3,alive,alive,1.051
+whisper-small,peter/quiet/a2.wav,peter,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,1.062
+whisper-small,peter/quiet/d1.wav,peter,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,1.128
+whisper-small,peter/quiet/d2.wav,peter,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,1.123
+whisper-small,peter/quiet/b1.wav,peter,quiet,goodbye,Do widzenia!,Do widzenia!,0,2,goodbye,goodbye,1.038
+whisper-small,peter/quiet/b2.wav,peter,quiet,goodbye,"Idę już, pa pa.","Już idę, papa.",3,4,goodbye,none,1.071
+whisper-small,peter/quiet/b3.wav,peter,quiet,goodbye,"Żegnaj, klaunie.",Żegnaj klaunie.,0,2,goodbye,goodbye,1.057
+whisper-small,peter/quiet/n1.wav,peter,quiet,none,Czy księżyc pamięta twój cyrk?,Czy księżyc pamięta twój cerk?,1,5,none,none,1.197
+whisper-small,peter/quiet/n2.wav,peter,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,1.055
+whisper-small,peter/quiet/n3.wav,peter,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,1.062
+whisper-small,peter/quiet/n4.wav,peter,quiet,none,Lubisz pizzę?,Lubisz pizza?,1,2,none,none,1.029
+whisper-small,peter/quiet/n5.wav,peter,quiet,none,Ładny kostium.,Kostiumy.,2,2,none,none,1.044
+whisper-small,hania/quiet/c1.wav,hania,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka?,0,4,candy,candy,1.071
+whisper-small,hania/quiet/c2.wav,hania,quiet,candy,Cukierek albo psikus!,Sukierek albo psikos.,2,3,none,none,1.088
+whisper-small,hania/quiet/c3.wav,hania,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,1.118
+whisper-small,hania/quiet/h1.wav,hania,quiet,hands,Pokaż mi swoje ręce.,Przecież mi swoje ręce.,1,4,hands,hands,1.066
+whisper-small,hania/quiet/h2.wav,hania,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,1.038
+whisper-small,hania/quiet/i1.wav,hania,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,1.008
+whisper-small,hania/quiet/i2.wav,hania,quiet,identity,Jak masz na imię?,Tak masz na imię.,1,4,identity,none,1.043
+whisper-small,hania/quiet/f1.wav,hania,quiet,fear,Boję się ciebie.,Boję się Ciebie.,0,3,fear,fear,1.075
+whisper-small,hania/quiet/f2.wav,hania,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,1.066
+whisper-small,hania/quiet/f3.wav,hania,quiet,fear,Nie strasz mnie!,Nie strasz mnie.,0,3,fear,fear,1.023
+whisper-small,hania/quiet/p1.wav,hania,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,1.057
+whisper-small,hania/quiet/p2.wav,hania,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,1.04
+whisper-small,hania/quiet/p3.wav,hania,quiet,presence,Odezwij się!,Odeźwisze!,2,2,presence,none,1.067
+whisper-small,hania/quiet/g1.wav,hania,quiet,greeting,"Cześć, klaunie!",Cześć klaunie!,0,2,greeting,greeting,1.057
+whisper-small,hania/quiet/g2.wav,hania,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,1.06
+whisper-small,hania/quiet/g3.wav,hania,quiet,greeting,"Hej, co słychać?","Hej, co słyszać?",1,3,greeting,greeting,1.05
+whisper-small,hania/quiet/s1.wav,hania,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,1.094
+whisper-small,hania/quiet/s2.wav,hania,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,1.085
+whisper-small,hania/quiet/a1.wav,hania,quiet,alive,Czy ty żyjesz?,Czy ty żyjesz?,0,3,alive,alive,1.065
+whisper-small,hania/quiet/a2.wav,hania,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,1.083
+whisper-small,hania/quiet/d1.wav,hania,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,1.08
+whisper-small,hania/quiet/d2.wav,hania,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,1.09
+whisper-small,hania/quiet/b1.wav,hania,quiet,goodbye,Do widzenia!,Do widzenia!,0,2,goodbye,goodbye,0.994
+whisper-small,hania/quiet/b2.wav,hania,quiet,goodbye,"Idę już, pa pa.","Idę już, papa.",2,4,goodbye,goodbye,1.021
+whisper-small,hania/quiet/b3.wav,hania,quiet,goodbye,"Żegnaj, klaunie.",Żegnaj klaunie.,0,2,goodbye,goodbye,1.061
+whisper-small,hania/quiet/n1.wav,hania,quiet,none,Czy księżyc pamięta twój cyrk?,Użycz pamięta twój cyrk.,2,5,none,none,1.176
+whisper-small,hania/quiet/n2.wav,hania,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,1.097
+whisper-small,hania/quiet/n3.wav,hania,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,1.053
+whisper-small,hania/quiet/n4.wav,hania,quiet,none,Lubisz pizzę?,Lubisz pizzce?,1,2,none,none,1.045
+whisper-small,hania/quiet/n5.wav,hania,quiet,none,Ładny kostium.,Ładny kostium.,0,2,none,none,1.037
+whisper-turbo,peter/quiet/c1.wav,peter,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka.,0,4,candy,candy,4.96
+whisper-turbo,peter/quiet/c2.wav,peter,quiet,candy,Cukierek albo psikus!,Cukierek albo psikus.,0,3,none,none,4.991
+whisper-turbo,peter/quiet/c3.wav,peter,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,4.926
+whisper-turbo,peter/quiet/h1.wav,peter,quiet,hands,Pokaż mi swoje ręce.,Pokaż mi swoje ręce.,0,4,hands,hands,4.966
+whisper-turbo,peter/quiet/h2.wav,peter,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,4.969
+whisper-turbo,peter/quiet/i1.wav,peter,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,4.941
+whisper-turbo,peter/quiet/i2.wav,peter,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,4.998
+whisper-turbo,peter/quiet/f1.wav,peter,quiet,fear,Boję się ciebie.,Boję się Ciebie.,0,3,fear,fear,4.993
+whisper-turbo,peter/quiet/f2.wav,peter,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,4.946
+whisper-turbo,peter/quiet/f3.wav,peter,quiet,fear,Nie strasz mnie!,Nie strasz mnie.,0,3,fear,fear,4.972
+whisper-turbo,peter/quiet/p1.wav,peter,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,4.918
+whisper-turbo,peter/quiet/p2.wav,peter,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,4.968
+whisper-turbo,peter/quiet/p3.wav,peter,quiet,presence,Odezwij się!,Odezwij się.,0,2,presence,presence,4.934
+whisper-turbo,peter/quiet/g1.wav,peter,quiet,greeting,"Cześć, klaunie!",Cześć klaunie!,0,2,greeting,greeting,4.995
+whisper-turbo,peter/quiet/g2.wav,peter,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,4.956
+whisper-turbo,peter/quiet/g3.wav,peter,quiet,greeting,"Hej, co słychać?","Hej, co słychać?",0,3,greeting,greeting,5.038
+whisper-turbo,peter/quiet/s1.wav,peter,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,4.993
+whisper-turbo,peter/quiet/s2.wav,peter,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,5.009
+whisper-turbo,peter/quiet/a1.wav,peter,quiet,alive,Czy ty żyjesz?,Czy ty żyjesz?,0,3,alive,alive,4.996
+whisper-turbo,peter/quiet/a2.wav,peter,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,5.305
+whisper-turbo,peter/quiet/d1.wav,peter,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,5.198
+whisper-turbo,peter/quiet/d2.wav,peter,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,5.15
+whisper-turbo,peter/quiet/b1.wav,peter,quiet,goodbye,Do widzenia!,Do widzenia.,0,2,goodbye,goodbye,5.031
+whisper-turbo,peter/quiet/b2.wav,peter,quiet,goodbye,"Idę już, pa pa.","Już ide, papa!",3,4,goodbye,none,5.06
+whisper-turbo,peter/quiet/b3.wav,peter,quiet,goodbye,"Żegnaj, klaunie.","Żegnaj, klaunie!",0,2,goodbye,goodbye,5.132
+whisper-turbo,peter/quiet/n1.wav,peter,quiet,none,Czy księżyc pamięta twój cyrk?,Czy Księżyc pamięta Twój cyrk?,0,5,none,none,5.198
+whisper-turbo,peter/quiet/n2.wav,peter,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,5.253
+whisper-turbo,peter/quiet/n3.wav,peter,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,5.675
+whisper-turbo,peter/quiet/n4.wav,peter,quiet,none,Lubisz pizzę?,Lubisz pizzę?,0,2,none,none,5.138
+whisper-turbo,peter/quiet/n5.wav,peter,quiet,none,Ładny kostium.,Dynie i kostium.,2,2,none,none,5.059
+whisper-turbo,hania/quiet/c1.wav,hania,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka?,0,4,candy,candy,5.144
+whisper-turbo,hania/quiet/c2.wav,hania,quiet,candy,Cukierek albo psikus!,Zukiere kalbopsikus!,3,3,none,none,5.266
+whisper-turbo,hania/quiet/c3.wav,hania,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,5.3
+whisper-turbo,hania/quiet/h1.wav,hania,quiet,hands,Pokaż mi swoje ręce.,Zdajesz mi swoje ręce.,1,4,hands,hands,5.096
+whisper-turbo,hania/quiet/h2.wav,hania,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,5.119
+whisper-turbo,hania/quiet/i1.wav,hania,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,4.957
+whisper-turbo,hania/quiet/i2.wav,hania,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,4.976
+whisper-turbo,hania/quiet/f1.wav,hania,quiet,fear,Boję się ciebie.,Boję się Ciebie.,0,3,fear,fear,4.973
+whisper-turbo,hania/quiet/f2.wav,hania,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,5.162
+whisper-turbo,hania/quiet/f3.wav,hania,quiet,fear,Nie strasz mnie!,Nie strasz mnie.,0,3,fear,fear,4.942
+whisper-turbo,hania/quiet/p1.wav,hania,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,4.946
+whisper-turbo,hania/quiet/p2.wav,hania,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,4.967
+whisper-turbo,hania/quiet/p3.wav,hania,quiet,presence,Odezwij się!,Odej zviše!,2,2,presence,none,4.999
+whisper-turbo,hania/quiet/g1.wav,hania,quiet,greeting,"Cześć, klaunie!","Cześć, klaunie!",0,2,greeting,greeting,4.991
+whisper-turbo,hania/quiet/g2.wav,hania,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,4.994
+whisper-turbo,hania/quiet/g3.wav,hania,quiet,greeting,"Hej, co słychać?","Hej, co słychać?",0,3,greeting,greeting,4.989
+whisper-turbo,hania/quiet/s1.wav,hania,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,5.002
+whisper-turbo,hania/quiet/s2.wav,hania,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,5.063
+whisper-turbo,hania/quiet/a1.wav,hania,quiet,alive,Czy ty żyjesz?,Czy Ty żyjesz?,0,3,alive,alive,4.938
+whisper-turbo,hania/quiet/a2.wav,hania,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,4.983
+whisper-turbo,hania/quiet/d1.wav,hania,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,4.958
+whisper-turbo,hania/quiet/d2.wav,hania,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,4.993
+whisper-turbo,hania/quiet/b1.wav,hania,quiet,goodbye,Do widzenia!,Do widzenia!,0,2,goodbye,goodbye,4.939
+whisper-turbo,hania/quiet/b2.wav,hania,quiet,goodbye,"Idę już, pa pa.","Idę już, pa, pa.",0,4,goodbye,goodbye,4.978
+whisper-turbo,hania/quiet/b3.wav,hania,quiet,goodbye,"Żegnaj, klaunie.","Żegnaj, klaunie.",0,2,goodbye,goodbye,4.974
+whisper-turbo,hania/quiet/n1.wav,hania,quiet,none,Czy księżyc pamięta twój cyrk?,Którycz pamięta twój cyrk?,2,5,none,none,5.062
+whisper-turbo,hania/quiet/n2.wav,hania,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,4.975
+whisper-turbo,hania/quiet/n3.wav,hania,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,4.991
+whisper-turbo,hania/quiet/n4.wav,hania,quiet,none,Lubisz pizzę?,Lubisz pizzę?,0,2,none,none,4.948
+whisper-turbo,hania/quiet/n5.wav,hania,quiet,none,Ładny kostium.,Ładny kostium.,0,2,none,none,4.936
+mlx-turbo,peter/quiet/c1.wav,peter,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka.,0,4,candy,candy,0.626
+mlx-turbo,peter/quiet/c2.wav,peter,quiet,candy,Cukierek albo psikus!,Cukierek albo psikus.,0,3,none,none,0.621
+mlx-turbo,peter/quiet/c3.wav,peter,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,0.619
+mlx-turbo,peter/quiet/h1.wav,peter,quiet,hands,Pokaż mi swoje ręce.,Pokaż mi swoje ręce.,0,4,hands,hands,0.618
+mlx-turbo,peter/quiet/h2.wav,peter,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,0.615
+mlx-turbo,peter/quiet/i1.wav,peter,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,0.61
+mlx-turbo,peter/quiet/i2.wav,peter,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,0.619
+mlx-turbo,peter/quiet/f1.wav,peter,quiet,fear,Boję się ciebie.,Boję się Ciebie.,0,3,fear,fear,0.616
+mlx-turbo,peter/quiet/f2.wav,peter,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.616
+mlx-turbo,peter/quiet/f3.wav,peter,quiet,fear,Nie strasz mnie!,Nie strasz mnie.,0,3,fear,fear,0.614
+mlx-turbo,peter/quiet/p1.wav,peter,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,0.614
+mlx-turbo,peter/quiet/p2.wav,peter,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,0.618
+mlx-turbo,peter/quiet/p3.wav,peter,quiet,presence,Odezwij się!,Odezwij się.,0,2,presence,presence,0.613
+mlx-turbo,peter/quiet/g1.wav,peter,quiet,greeting,"Cześć, klaunie!",Cześć klaunie!,0,2,greeting,greeting,0.615
+mlx-turbo,peter/quiet/g2.wav,peter,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,0.622
+mlx-turbo,peter/quiet/g3.wav,peter,quiet,greeting,"Hej, co słychać?","Hej, co słychać?",0,3,greeting,greeting,0.619
+mlx-turbo,peter/quiet/s1.wav,peter,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,0.633
+mlx-turbo,peter/quiet/s2.wav,peter,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,0.619
+mlx-turbo,peter/quiet/a1.wav,peter,quiet,alive,Czy ty żyjesz?,Czy ty żyjesz?,0,3,alive,alive,0.619
+mlx-turbo,peter/quiet/a2.wav,peter,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,0.62
+mlx-turbo,peter/quiet/d1.wav,peter,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,0.625
+mlx-turbo,peter/quiet/d2.wav,peter,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,0.652
+mlx-turbo,peter/quiet/b1.wav,peter,quiet,goodbye,Do widzenia!,Do widzenia.,0,2,goodbye,goodbye,0.612
+mlx-turbo,peter/quiet/b2.wav,peter,quiet,goodbye,"Idę już, pa pa.","Już ide, pa pa.",2,4,goodbye,goodbye,0.618
+mlx-turbo,peter/quiet/b3.wav,peter,quiet,goodbye,"Żegnaj, klaunie.",Żegnaj klaunie!,0,2,goodbye,goodbye,0.617
+mlx-turbo,peter/quiet/n1.wav,peter,quiet,none,Czy księżyc pamięta twój cyrk?,Czy Księżyc pamięta Twój cyrk?,0,5,none,none,0.64
+mlx-turbo,peter/quiet/n2.wav,peter,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.617
+mlx-turbo,peter/quiet/n3.wav,peter,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.626
+mlx-turbo,peter/quiet/n4.wav,peter,quiet,none,Lubisz pizzę?,Lubisz pizzę?,0,2,none,none,0.614
+mlx-turbo,peter/quiet/n5.wav,peter,quiet,none,Ładny kostium.,"Tanty, chomu, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy, duchy",56,2,none,none,5.921
+mlx-turbo,hania/quiet/c1.wav,hania,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka?,0,4,candy,candy,0.653
+mlx-turbo,hania/quiet/c2.wav,hania,quiet,candy,Cukierek albo psikus!,Zuchierki albo psikus.,1,3,none,none,0.644
+mlx-turbo,hania/quiet/c3.wav,hania,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,0.626
+mlx-turbo,hania/quiet/h1.wav,hania,quiet,hands,Pokaż mi swoje ręce.,Zdajesz mi swoje ręce.,1,4,hands,hands,0.626
+mlx-turbo,hania/quiet/h2.wav,hania,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,0.614
+mlx-turbo,hania/quiet/i1.wav,hania,quiet,identity,Kim jesteś?,Kim jesteś?,0,2,identity,identity,0.609
+mlx-turbo,hania/quiet/i2.wav,hania,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,0.62
+mlx-turbo,hania/quiet/f1.wav,hania,quiet,fear,Boję się ciebie.,Boję się ciebie.,0,3,fear,fear,0.638
+mlx-turbo,hania/quiet/f2.wav,hania,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.621
+mlx-turbo,hania/quiet/f3.wav,hania,quiet,fear,Nie strasz mnie!,Nie strasz mnie.,0,3,fear,fear,0.611
+mlx-turbo,hania/quiet/p1.wav,hania,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,0.616
+mlx-turbo,hania/quiet/p2.wav,hania,quiet,presence,Słyszysz mnie?,Słyszysz mnie?,0,2,presence,presence,0.616
+mlx-turbo,hania/quiet/p3.wav,hania,quiet,presence,Odezwij się!,Odeź više!,2,2,presence,none,0.617
+mlx-turbo,hania/quiet/g1.wav,hania,quiet,greeting,"Cześć, klaunie!",Cześć klaunie!,0,2,greeting,greeting,0.617
+mlx-turbo,hania/quiet/g2.wav,hania,quiet,greeting,Dobry wieczór.,Dobry wieczór.,0,2,greeting,greeting,0.62
+mlx-turbo,hania/quiet/g3.wav,hania,quiet,greeting,"Hej, co słychać?","Hej, co słychać?",0,3,greeting,greeting,0.648
+mlx-turbo,hania/quiet/s1.wav,hania,quiet,smile,Czemu się tak uśmiechasz?,Czemu się tak uśmiechasz?,0,4,smile,smile,0.629
+mlx-turbo,hania/quiet/s2.wav,hania,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,0.617
+mlx-turbo,hania/quiet/a1.wav,hania,quiet,alive,Czy ty żyjesz?,Czy ty żyjesz?,0,3,alive,alive,0.621
+mlx-turbo,hania/quiet/a2.wav,hania,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy?,0,2,alive,alive,0.62
+mlx-turbo,hania/quiet/d1.wav,hania,quiet,darkness,Co tu robisz w ciemności?,Co tu robisz w ciemności?,0,5,darkness,darkness,0.625
+mlx-turbo,hania/quiet/d2.wav,hania,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,0.626
+mlx-turbo,hania/quiet/b1.wav,hania,quiet,goodbye,Do widzenia!,Do widzenia!,0,2,goodbye,goodbye,0.609
+mlx-turbo,hania/quiet/b2.wav,hania,quiet,goodbye,"Idę już, pa pa.",Idę już pa pa.,0,4,goodbye,goodbye,0.618
+mlx-turbo,hania/quiet/b3.wav,hania,quiet,goodbye,"Żegnaj, klaunie.",Żegnaj klaunie.,0,2,goodbye,goodbye,0.64
+mlx-turbo,hania/quiet/n1.wav,hania,quiet,none,Czy księżyc pamięta twój cyrk?,Pamięta twój cyrk?,2,5,none,none,0.629
+mlx-turbo,hania/quiet/n2.wav,hania,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.621
+mlx-turbo,hania/quiet/n3.wav,hania,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.616
+mlx-turbo,hania/quiet/n4.wav,hania,quiet,none,Lubisz pizzę?,Lubisz pizce?,1,2,none,none,0.622
+mlx-turbo,hania/quiet/n5.wav,hania,quiet,none,Ładny kostium.,Ładny kostium.,0,2,none,none,0.615
+whistle,peter/quiet/c1.wav,peter,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie tu kierka.,2,4,candy,none,0.019
+whistle,peter/quiet/c2.wav,peter,quiet,candy,Cukierek albo psikus!,Tu kiedykalbo psychus.,3,3,none,none,0.018
+whistle,peter/quiet/c3.wav,peter,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakiejś słodycze.,1,3,candy,candy,0.028
+whistle,peter/quiet/h1.wav,peter,quiet,hands,Pokaż mi swoje ręce.,Pokasz mi swoje ręce.,1,4,hands,hands,0.017
+whistle,peter/quiet/h2.wav,peter,quiet,hands,Daj mi rękę.,Dziękuję.,3,3,none,none,0.014
+whistle,peter/quiet/i1.wav,peter,quiet,identity,Kim jesteś?,Kimi jesteś.,1,2,identity,none,0.014
+whistle,peter/quiet/i2.wav,peter,quiet,identity,Jak masz na imię?,Jak masz najmniej?,2,4,identity,none,0.016
+whistle,peter/quiet/f1.wav,peter,quiet,fear,Boję się ciebie.,Bo jeszcze chętnie.,3,3,fear,none,0.023
+whistle,peter/quiet/f2.wav,peter,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.016
+whistle,peter/quiet/f3.wav,peter,quiet,fear,Nie strasz mnie!,Nie strasznie.,2,3,fear,fear,0.012
+whistle,peter/quiet/p1.wav,peter,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,0.019
+whistle,peter/quiet/p2.wav,peter,quiet,presence,Słyszysz mnie?,Słyszeliśmy nie.,2,2,presence,none,0.018
+whistle,peter/quiet/p3.wav,peter,quiet,presence,Odezwij się!,Odeswisz.,2,2,presence,none,0.013
+whistle,peter/quiet/g1.wav,peter,quiet,greeting,"Cześć, klaunie!",Jest glau nie.,3,2,greeting,none,0.013
+whistle,peter/quiet/g2.wav,peter,quiet,greeting,Dobry wieczór.,Dobry wietur.,1,2,greeting,none,0.012
+whistle,peter/quiet/g3.wav,peter,quiet,greeting,"Hej, co słychać?","Hey, czasu hutch.",3,3,greeting,none,0.015
+whistle,peter/quiet/s1.wav,peter,quiet,smile,Czemu się tak uśmiechasz?,Czy musi się tak uśmierć?,3,4,smile,none,0.024
+whistle,peter/quiet/s2.wav,peter,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejeżdż?,1,4,smile,none,0.026
+whistle,peter/quiet/a1.wav,peter,quiet,alive,Czy ty żyjesz?,Czy też jeszcze?,2,3,alive,none,0.016
+whistle,peter/quiet/a2.wav,peter,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy.,0,2,alive,alive,0.016
+whistle,peter/quiet/d1.wav,peter,quiet,darkness,Co tu robisz w ciemności?,Co to robi w szciemności?,3,5,darkness,darkness,0.023
+whistle,peter/quiet/d2.wav,peter,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,0.021
+whistle,peter/quiet/b1.wav,peter,quiet,goodbye,Do widzenia!,Do widzenia.,0,2,goodbye,goodbye,0.01
+whistle,peter/quiet/b2.wav,peter,quiet,goodbye,"Idę już, pa pa.",Już się te papa.,4,4,goodbye,none,0.017
+whistle,peter/quiet/b3.wav,peter,quiet,goodbye,"Żegnaj, klaunie.",Z zeg najklałnie.,3,2,goodbye,none,0.016
+whistle,peter/quiet/n1.wav,peter,quiet,none,Czy księżyc pamięta twój cyrk?,Czy księżyc pamięta twój serk?,1,5,none,none,0.029
+whistle,peter/quiet/n2.wav,peter,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.017
+whistle,peter/quiet/n3.wav,peter,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.012
+whistle,peter/quiet/n4.wav,peter,quiet,none,Lubisz pizzę?,"Lobiście, czy?",2,2,none,none,0.017
+whistle,peter/quiet/n5.wav,peter,quiet,none,Ładny kostium.,Nie kosztułem.,2,2,none,none,0.014
+whistle,hania/quiet/c1.wav,hania,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka.,0,4,candy,candy,0.02
+whistle,hania/quiet/c2.wav,hania,quiet,candy,Cukierek albo psikus!,Zukierek albo psikos.,2,3,none,none,0.018
+whistle,hania/quiet/c3.wav,hania,quiet,candy,Poproszę jakieś słodycze.,Proszę jakieś słodycze.,1,3,candy,candy,0.024
+whistle,hania/quiet/h1.wav,hania,quiet,hands,Pokaż mi swoje ręce.,mi swoje reutza.,2,4,hands,none,0.014
+whistle,hania/quiet/h2.wav,hania,quiet,hands,Daj mi rękę.,Daimi ręka.,3,3,none,hands,0.013
+whistle,hania/quiet/i1.wav,hania,quiet,identity,Kim jesteś?,Kimi jest gaść,3,2,identity,none,0.016
+whistle,hania/quiet/i2.wav,hania,quiet,identity,Jak masz na imię?,Tak masz najmniej.,3,4,identity,none,0.016
+whistle,hania/quiet/f1.wav,hania,quiet,fear,Boję się ciebie.,Bo jeszcze ciebie.,2,3,fear,none,0.018
+whistle,hania/quiet/f2.wav,hania,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.017
+whistle,hania/quiet/f3.wav,hania,quiet,fear,Nie strasz mnie!,Nie straś mnie.,1,3,fear,none,0.013
+whistle,hania/quiet/p1.wav,hania,quiet,presence,"Halo, jest tu ktoś?",Halo jest duktosz!,2,4,presence,presence,0.018
+whistle,hania/quiet/p2.wav,hania,quiet,presence,Słyszysz mnie?,Przyszłość mnie?,1,2,presence,none,0.019
+whistle,hania/quiet/p3.wav,hania,quiet,presence,Odezwij się!,"O, das wieścia.",3,2,presence,none,0.016
+whistle,hania/quiet/g1.wav,hania,quiet,greeting,"Cześć, klaunie!",Wszyscy ci klałnie.,3,2,greeting,none,0.017
+whistle,hania/quiet/g2.wav,hania,quiet,greeting,Dobry wieczór.,Dobry wietur.,1,2,greeting,none,0.012
+whistle,hania/quiet/g3.wav,hania,quiet,greeting,"Hej, co słychać?",Hey dosły hatch!,3,3,greeting,none,0.013
+whistle,hania/quiet/s1.wav,hania,quiet,smile,Czemu się tak uśmiechasz?,Ta musia ta kusja jest haz.,6,4,smile,none,0.02
+whistle,hania/quiet/s2.wav,hania,quiet,smile,Z czego się śmiejesz?,Zyczego się śmiejeżdż.,3,4,smile,none,0.028
+whistle,hania/quiet/a1.wav,hania,quiet,alive,Czy ty żyjesz?,Czy też jeszcze?,2,3,alive,none,0.017
+whistle,hania/quiet/a2.wav,hania,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy.,0,2,alive,alive,0.017
+whistle,hania/quiet/d1.wav,hania,quiet,darkness,Co tu robisz w ciemności?,Co tu robiś wciemności?,3,5,darkness,darkness,0.024
+whistle,hania/quiet/d2.wav,hania,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,0.024
+whistle,hania/quiet/b1.wav,hania,quiet,goodbye,Do widzenia!,Do widzenia.,0,2,goodbye,goodbye,0.011
+whistle,hania/quiet/b2.wav,hania,quiet,goodbye,"Idę już, pa pa.",I był już papa.,4,4,goodbye,none,0.016
+whistle,hania/quiet/b3.wav,hania,quiet,goodbye,"Żegnaj, klaunie.",Żyk najklałnie.,2,2,goodbye,none,0.018
+whistle,hania/quiet/n1.wav,hania,quiet,none,Czy księżyc pamięta twój cyrk?,Pamięta twój tyrk.,3,5,none,none,0.017
+whistle,hania/quiet/n2.wav,hania,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.016
+whistle,hania/quiet/n3.wav,hania,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.012
+whistle,hania/quiet/n4.wav,hania,quiet,none,Lubisz pizzę?,Lubiść pizzę!,1,2,none,none,0.02
+whistle,hania/quiet/n5.wav,hania,quiet,none,Ładny kostium.,Wadniko styum!,2,2,none,none,0.015
+whistle-kw,peter/quiet/c1.wav,peter,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie tu kierka.,2,4,candy,none,0.02
+whistle-kw,peter/quiet/c2.wav,peter,quiet,candy,Cukierek albo psikus!,Cukierek albo psikus.,0,3,none,none,0.017
+whistle-kw,peter/quiet/c3.wav,peter,quiet,candy,Poproszę jakieś słodycze.,Poproszę jakieś słodycze.,0,3,candy,candy,0.023
+whistle-kw,peter/quiet/h1.wav,peter,quiet,hands,Pokaż mi swoje ręce.,Pokasz mi swoje ręce.,1,4,hands,hands,0.019
+whistle-kw,peter/quiet/h2.wav,peter,quiet,hands,Daj mi rękę.,Da imię rękę,2,3,none,none,0.014
+whistle-kw,peter/quiet/i1.wav,peter,quiet,identity,Kim jesteś?,kim jesteś,0,2,identity,identity,0.013
+whistle-kw,peter/quiet/i2.wav,peter,quiet,identity,Jak masz na imię?,Jak masz na imię?,0,4,identity,identity,0.016
+whistle-kw,peter/quiet/f1.wav,peter,quiet,fear,Boję się ciebie.,boję się cieszę.,1,3,fear,fear,0.018
+whistle-kw,peter/quiet/f2.wav,peter,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.016
+whistle-kw,peter/quiet/f3.wav,peter,quiet,fear,Nie strasz mnie!,Nie strasznie.,2,3,fear,fear,0.012
+whistle-kw,peter/quiet/p1.wav,peter,quiet,presence,"Halo, jest tu ktoś?","Halo, jest tu ktoś?",0,4,presence,presence,0.019
+whistle-kw,peter/quiet/p2.wav,peter,quiet,presence,Słyszysz mnie?,słyszysz mnie.,0,2,presence,presence,0.014
+whistle-kw,peter/quiet/p3.wav,peter,quiet,presence,Odezwij się!,Odeswisz.,2,2,presence,none,0.012
+whistle-kw,peter/quiet/g1.wav,peter,quiet,greeting,"Cześć, klaunie!",Jest glau nie.,3,2,greeting,none,0.014
+whistle-kw,peter/quiet/g2.wav,peter,quiet,greeting,Dobry wieczór.,dobry wieczór.,0,2,greeting,greeting,0.013
+whistle-kw,peter/quiet/g3.wav,peter,quiet,greeting,"Hej, co słychać?","Hej, że słyszysz słyszysz.",3,3,greeting,greeting,0.027
+whistle-kw,peter/quiet/s1.wav,peter,quiet,smile,Czemu się tak uśmiechasz?,Czy musi tak uśmiechać?,3,4,smile,smile,0.026
+whistle-kw,peter/quiet/s2.wav,peter,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,0.021
+whistle-kw,peter/quiet/a1.wav,peter,quiet,alive,Czy ty żyjesz?,Czy dzień dobry?,2,3,alive,greeting,0.016
+whistle-kw,peter/quiet/a2.wav,peter,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy.,0,2,alive,alive,0.016
+whistle-kw,peter/quiet/d1.wav,peter,quiet,darkness,Co tu robisz w ciemności?,Co tu robi w szciemności?,2,5,darkness,darkness,0.022
+whistle-kw,peter/quiet/d2.wav,peter,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest ta ciemno?,1,5,darkness,darkness,0.022
+whistle-kw,peter/quiet/b1.wav,peter,quiet,goodbye,Do widzenia!,do widzenia.,0,2,goodbye,goodbye,0.01
+whistle-kw,peter/quiet/b2.wav,peter,quiet,goodbye,"Idę już, pa pa.",I uśmiechę papa.,4,4,goodbye,smile,0.019
+whistle-kw,peter/quiet/b3.wav,peter,quiet,goodbye,"Żegnaj, klaunie.",Z żegnaj klaunie.,1,2,goodbye,goodbye,0.019
+whistle-kw,peter/quiet/n1.wav,peter,quiet,none,Czy księżyc pamięta twój cyrk?,Czy księżyc pamięta twój serk?,1,5,none,none,0.029
+whistle-kw,peter/quiet/n2.wav,peter,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.018
+whistle-kw,peter/quiet/n3.wav,peter,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.013
+whistle-kw,peter/quiet/n4.wav,peter,quiet,none,Lubisz pizzę?,Lobiście cześć.,2,2,none,greeting,0.021
+whistle-kw,peter/quiet/n5.wav,peter,quiet,none,Ładny kostium.,Nie kosztułem.,2,2,none,none,0.015
+whistle-kw,hania/quiet/c1.wav,hania,quiet,candy,Masz dla mnie cukierka?,Masz dla mnie cukierka.,0,4,candy,candy,0.02
+whistle-kw,hania/quiet/c2.wav,hania,quiet,candy,Cukierek albo psikus!,Zukierek albo psikus.,1,3,none,none,0.019
+whistle-kw,hania/quiet/c3.wav,hania,quiet,candy,Poproszę jakieś słodycze.,Proszę jakieś słodycze.,1,3,candy,candy,0.023
+whistle-kw,hania/quiet/h1.wav,hania,quiet,hands,Pokaż mi swoje ręce.,miswoje ręce.,3,4,hands,hands,0.014
+whistle-kw,hania/quiet/h2.wav,hania,quiet,hands,Daj mi rękę.,Daj mi rękę.,0,3,none,none,0.015
+whistle-kw,hania/quiet/i1.wav,hania,quiet,identity,Kim jesteś?,Kimi jest cześć.,3,2,identity,greeting,0.018
+whistle-kw,hania/quiet/i2.wav,hania,quiet,identity,Jak masz na imię?,Tak masz na imię.,1,4,identity,none,0.015
+whistle-kw,hania/quiet/f1.wav,hania,quiet,fear,Boję się ciebie.,boję się ciebie.,0,3,fear,fear,0.017
+whistle-kw,hania/quiet/f2.wav,hania,quiet,fear,Wcale się nie boję.,Wcale się nie boję.,0,4,fear,fear,0.017
+whistle-kw,hania/quiet/f3.wav,hania,quiet,fear,Nie strasz mnie!,Nie strasznie.,2,3,fear,fear,0.013
+whistle-kw,hania/quiet/p1.wav,hania,quiet,presence,"Halo, jest tu ktoś?",Halo jest duktosz!,2,4,presence,presence,0.019
+whistle-kw,hania/quiet/p2.wav,hania,quiet,presence,Słyszysz mnie?,że słyszysz mnie?,1,2,presence,presence,0.018
+whistle-kw,hania/quiet/p3.wav,hania,quiet,presence,Odezwij się!,"O, das wieścia.",3,2,presence,none,0.017
+whistle-kw,hania/quiet/g1.wav,hania,quiet,greeting,"Cześć, klaunie!",cześć klaunie.,0,2,greeting,greeting,0.016
+whistle-kw,hania/quiet/g2.wav,hania,quiet,greeting,Dobry wieczór.,dobry wieczór.,0,2,greeting,greeting,0.014
+whistle-kw,hania/quiet/g3.wav,hania,quiet,greeting,"Hej, co słychać?",Hey dosły hatch!,3,3,greeting,none,0.014
+whistle-kw,hania/quiet/s1.wav,hania,quiet,smile,Czemu się tak uśmiechasz?,Trzeba użytek uśmiechas.,4,4,smile,smile,0.027
+whistle-kw,hania/quiet/s2.wav,hania,quiet,smile,Z czego się śmiejesz?,Z czego się śmiejesz?,0,4,smile,smile,0.022
+whistle-kw,hania/quiet/a1.wav,hania,quiet,alive,Czy ty żyjesz?,Czy te żyjesz?,1,3,alive,alive,0.015
+whistle-kw,hania/quiet/a2.wav,hania,quiet,alive,Jesteś prawdziwy?,Jesteś prawdziwy.,0,2,alive,alive,0.018
+whistle-kw,hania/quiet/d1.wav,hania,quiet,darkness,Co tu robisz w ciemności?,Co tu robiś w ciemności?,1,5,darkness,darkness,0.024
+whistle-kw,hania/quiet/d2.wav,hania,quiet,darkness,Dlaczego tu jest tak ciemno?,Dlaczego tu jest tak ciemno?,0,5,darkness,darkness,0.023
+whistle-kw,hania/quiet/b1.wav,hania,quiet,goodbye,Do widzenia!,Do Widzenia.,0,2,goodbye,goodbye,0.011
+whistle-kw,hania/quiet/b2.wav,hania,quiet,goodbye,"Idę już, pa pa.",I był już papa.,4,4,goodbye,none,0.02
+whistle-kw,hania/quiet/b3.wav,hania,quiet,goodbye,"Żegnaj, klaunie.",żegnaj klaunie.,0,2,goodbye,goodbye,0.017
+whistle-kw,hania/quiet/n1.wav,hania,quiet,none,Czy księżyc pamięta twój cyrk?,Pamięta twój tyrk.,3,5,none,none,0.018
+whistle-kw,hania/quiet/n2.wav,hania,quiet,none,Gdzie jest moja mama?,Gdzie jest moja mama?,0,4,none,none,0.017
+whistle-kw,hania/quiet/n3.wav,hania,quiet,none,Ile masz lat?,Ile masz lat?,0,3,none,none,0.014
+whistle-kw,hania/quiet/n4.wav,hania,quiet,none,Lubisz pizzę?,Lubić pizzę!,1,2,none,none,0.02
+whistle-kw,hania/quiet/n5.wav,hania,quiet,none,Ładny kostium.,Wadniko styum!,2,2,none,none,0.015

@@ -1,0 +1,31 @@
+id	intent	text
+c1	candy	Masz dla mnie cukierka?
+c2	candy	Cukierek albo psikus!
+c3	candy	Poproszę jakieś słodycze.
+h1	hands	Pokaż mi swoje ręce.
+h2	hands	Daj mi rękę.
+i1	identity	Kim jesteś?
+i2	identity	Jak masz na imię?
+f1	fear	Boję się ciebie.
+f2	fear	Wcale się nie boję.
+f3	fear	Nie strasz mnie!
+p1	presence	Halo, jest tu ktoś?
+p2	presence	Słyszysz mnie?
+p3	presence	Odezwij się!
+g1	greeting	Cześć, klaunie!
+g2	greeting	Dobry wieczór.
+g3	greeting	Hej, co słychać?
+s1	smile	Czemu się tak uśmiechasz?
+s2	smile	Z czego się śmiejesz?
+a1	alive	Czy ty żyjesz?
+a2	alive	Jesteś prawdziwy?
+d1	darkness	Co tu robisz w ciemności?
+d2	darkness	Dlaczego tu jest tak ciemno?
+b1	goodbye	Do widzenia!
+b2	goodbye	Idę już, pa pa.
+b3	goodbye	Żegnaj, klaunie.
+n1	none	Czy księżyc pamięta twój cyrk?
+n2	none	Gdzie jest moja mama?
+n3	none	Ile masz lat?
+n4	none	Lubisz pizzę?
+n5	none	Ładny kostium.

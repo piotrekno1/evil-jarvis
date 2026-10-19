@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creepy-clown"
+version = "0.1.0"
+description = "Offline, hands-free voice-clown interaction prototype"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "sounddevice>=0.4.7",
+]
+
+[project.optional-dependencies]
+models = [
+  "av<19",
+  "faster-whisper>=1.1.0",
+  "llama-cpp-python>=0.3.7",
+  "mlx-whisper>=0.4.3",
+]
+neural-voice = [
+    "kokoro-mlx>=0.1.2",
+]
+polish-voice = [
+  "piper-tts>=1.8.0",
+]
+asr-bench = [
+  "av<19",
+  "faster-whisper>=1.1.0",
+  "cactus-needle>=3.2.4",
+  "mlx-whisper>=0.4.3",
+]
+[project.scripts]
+creepy-clown = "creepy_clown.app:main"
+clown-asr-bench = "creepy_clown.asr_bench:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

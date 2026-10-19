@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+models/
+
+
+# Benchmark voice recordings (keep private, never commit)
+recordings/
+
+# Build output
+.build/
+*.egg-info/
+.env
