@@ -19,6 +19,33 @@ in, and all speak Polish and English:
 - `pani-kraka`: a quarrelsome witch trapped in a crow, bargaining for shiny things (Polish by default)
 - `madame-nevermore`: an elegant witch-crow offering eerie, whimsical fortunes (English by default)
 
+## What it looks like
+
+The character waits quietly. When someone speaks, it turns the speech into text,
+writes a short in-character reply and says it out loud with a distorted voice.
+It then listens again, remembering the conversation until 90 seconds of silence.
+Every exchange is also printed in the terminal:
+
+```text
+Visitor> Who are you?
+Clown> The replacement clown. The original stopped coming, but his shoes still walk onto the stage.
+Visitor> Give me candy.
+Clown> Help yourself. Don't ask why the wrappers are warm.
+Visitor> That wasn't funny.
+Clown> Complaint accepted. My reflection will tell the next joke.
+```
+
+Replies start in a second or two on an Apple Silicon Mac. Some characters also play a
+recorded laugh or caw now and then, and hum or sigh to themselves when nobody is
+talking. Hear the voice: [English](samples/creepy-english-preview.wav),
+[Polish](samples/creepy-polish-preview.wav).
+
+The clown speaks Polish by default. For English, run
+`uv run evil-jarvis --language en` (download its English voice first with
+`--language en --download`), or use `--language auto` to answer in each
+visitor's language. To try it without a microphone, add `--text-only --no-speech`
+and type your lines.
+
 ## Requirements
 
 - Apple Silicon Mac, or Linux with an NVIDIA GPU (CPU-only works, slowly)
