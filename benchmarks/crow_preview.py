@@ -18,7 +18,7 @@ def main():
         effect=persona.voice.effect,
         speed=persona.voice.speed,
         prosody=persona.voice.prosody,
-        vocalization="crow",
+        vocalization_audio=persona.vocalization_audio,
         vocalization_probability=1.0,
         seed=7,
     )

@@ -6,14 +6,34 @@ PIPER_RATE = 22_050
 
 
 def pitch(factor: float, rate: int = PIPER_RATE) -> str:
-    """Lower the pitch by `factor` while keeping the original speed."""
+    """Shift pitch and formants by `factor` while keeping the original speed."""
     return f"asetrate={rate * factor:.0f},aresample={rate},atempo={1 / factor:.4f}"
+
+
+def crow_effect(*, harsh: bool = False) -> str:
+    """Nasal resonance and throat rasp, with a clear branch for consonants."""
+    factor, drive, depth = (1.24, 4.0, 0.52) if harsh else (1.16, 2.6, 0.32)
+    return (
+        f"{pitch(factor)},highpass=f=190,lowpass=f=7200,"
+        "equalizer=f=1250:t=q:w=1.1:g=5,asplit=2[clear][rasp];"
+        "[clear]volume=0.72[c];"
+        f"[rasp]highpass=f=450,lowpass=f=3600,volume={drive},"
+        "asoftclip=type=tanh:threshold=0.65:oversample=2,"
+        f"tremolo=f=47:d={depth},volume=0.28[r];"
+        "[c][r]amix=inputs=2:normalize=0:duration=first,"
+        "aecho=0.8:0.35:19:0.12,alimiter=limit=0.92"
+    )
 
 
 # Metallic recipe: dry voice + ring-modulated copy (robot buzz) + a comb of
 # 3-13 ms echoes with high feedback (the "inside a metal pipe" ring).
 PIPER_EFFECTS: dict[str, str] = {
     "clean": "anull",
+    # A smaller, nasal voice with a little throat rasp. Keep consonants in the
+    # dry branch; saturation and fast, shallow tremolo texture the other branch.
+    # Speech and the inserted call go through this same chain and room response.
+    "crow": crow_effect(),
+    "crow-harsh": crow_effect(harsh=True),
     "metallic": (
         f"{pitch(0.9)},highpass=f=90,asplit=3[dry][ring][comb];"
         "[dry]volume=0.6[d];"

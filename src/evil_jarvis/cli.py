@@ -84,7 +84,7 @@ def parse_device(value: str | None) -> int | str | None:
     "--persona",
     default=DEFAULT_PERSONA,
     show_default=True,
-    help="Built-in persona name or path to a persona .toml file.",
+    help="Built-in persona name, persona folder, or path to a .toml file.",
 )
 @info_flag("--list-personas", list_personas, "Show built-in personas and exit.")
 @click.option(
@@ -268,9 +268,11 @@ def run(args, persona: Persona, telemetry) -> None:
             speed=args.piper_speed,
             prosody=args.prosody,
             output_device=parse_device(args.output_device),
-            vocalization=persona.voice.vocalization,
+            vocalization_audio=persona.vocalization_audio,
             vocalization_probability=persona.voice.vocalization_probability,
             vocalization_position=persona.voice.vocalization_position,
+            vocalization_triggers=persona.voice.vocalization_triggers,
+            vocalization_min_gap_replies=persona.voice.vocalization_min_gap_replies,
         )
     )
     if args.text_only:

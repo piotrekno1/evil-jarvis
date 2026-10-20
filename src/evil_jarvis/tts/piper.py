@@ -7,7 +7,7 @@ import random
 import shutil
 import subprocess
 import tempfile
-from importlib import resources
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +21,12 @@ from evil_jarvis.tts.prosody import (
     fade_edges,
     plan_maniacal_delivery,
     split_phrases,
+)
+from evil_jarvis.tts.vocalization import (
+    VocalizationGate,
+    compile_triggers,
+    join_call,
+    join_replacements,
 )
 from evil_jarvis.wav import read_wav, write_wav
 
@@ -63,16 +69,23 @@ class PiperSpeaker:
         prosody: str = "maniacal",
         seed: int | None = None,
         player: AudioPlayer | None = None,
-        vocalization: str | None = None,
+        vocalization_audio: bytes | None = None,
         vocalization_probability: float = 0.65,
         vocalization_position: str = "random",
+        vocalization_triggers: tuple[str, ...] = (),
+        vocalization_min_gap_replies: int = 0,
+        vocalization_gate: VocalizationGate | None = None,
     ):
-        if vocalization not in (None, "crow"):
-            raise ValueError("Unknown vocalization; choose crow")
         if not 0 <= vocalization_probability <= 1:
             raise ValueError("vocalization_probability must be between 0 and 1")
-        if vocalization_position not in ("random", "start", "end", "between"):
-            raise ValueError("vocalization_position must be random, start, end or between")
+        if vocalization_position not in ("random", "start", "end", "between", "trigger", "varied"):
+            raise ValueError(
+                "vocalization_position must be random, start, end, between, trigger or varied"
+            )
+        if vocalization_position in ("trigger", "varied") and (
+            not vocalization_triggers or vocalization_audio is None
+        ):
+            raise ValueError("trigger position needs vocalization audio and triggers")
         path = Path(voice_path).expanduser()
         if not path.is_file() or not path.with_suffix(".onnx.json").is_file():
             raise ValueError(
@@ -98,20 +111,30 @@ class PiperSpeaker:
         self.prosody = prosody
         self._rng = random.Random(seed)
         self._player = player
-        self.vocalization_probability = vocalization_probability
+        self._vocalization_gate = (
+            vocalization_gate
+            if vocalization_gate is not None
+            else VocalizationGate(vocalization_probability, vocalization_min_gap_replies, seed=seed)
+        )
         self.vocalization_position = vocalization_position
+        self._trigger_pattern = compile_triggers(vocalization_triggers)
         self._call = None
-        if vocalization:
-            asset = resources.files("evil_jarvis.tts") / "assets" / "crow.wav"
-            with resources.as_file(asset) as asset_path:
-                samples, rate = read_wav(asset_path)
-            self._call = (
-                fade_edges(
-                    resample(samples, rate, self._voice.config.sample_rate),
-                    rate=self._voice.config.sample_rate,
-                )
-                * 0.65
-            )
+        if vocalization_audio is not None:
+            samples, rate = read_wav(BytesIO(vocalization_audio))
+            # Lower the bird recording slightly before the shared crow effect
+            # raises the speech. This brings their vocal ranges closer together.
+            call_rate = round(rate * 0.86) if effect in ("crow", "crow-harsh") else rate
+            self._call = resample(samples, call_rate, self._voice.config.sample_rate)
+
+    @property
+    def vocalization_probability(self) -> float:
+        return self._vocalization_gate.probability
+
+    @vocalization_probability.setter
+    def vocalization_probability(self, probability: float) -> None:
+        if not 0 <= probability <= 1:
+            raise ValueError("vocalization_probability must be between 0 and 1")
+        self._vocalization_gate.probability = probability
 
     def _synthesize(self, text: str, length_scale: float, erratic: bool):
 
@@ -142,41 +165,86 @@ class PiperSpeaker:
         return np.concatenate(pieces)
 
     def _render_with_call(self, text: str):
-        """Insert at most one recorded call, never splitting a spoken sentence."""
-        if (
-            self._call is None
-            or not text.strip()
-            or self._rng.random() >= self.vocalization_probability
-        ):
+        """Insert a random call, or replace explicit text cues with recordings."""
+        if self.vocalization_position in ("trigger", "varied"):
+            return self._render_triggered(text)
+        if not self._vocalization_gate.allow(self._call is not None and bool(text.strip())):
             return self._render_speech(text)
-        phrases = split_phrases(text)
         position = self.vocalization_position
         if position == "random":
             positions = ["start", "end"]
-            if len(phrases) > 1:
+            if len(split_phrases(text)) > 1:
                 positions.append("between")
             position = self._rng.choice(positions)
-        gap = np.zeros(int(self._voice.config.sample_rate * 0.12), dtype=np.float32)
+        return self._render_positioned(text, position)
+
+    def _render_positioned(self, text: str, position: str):
+        """Place a recording only at the opening, ending or a sentence boundary."""
+        phrases = split_phrases(text)
+        rate = self._voice.config.sample_rate
         if position == "between" and len(phrases) > 1:
             boundary = self._rng.randrange(1, len(phrases))
-            return np.concatenate(
+            return join_call(
                 [
                     self._render_speech(" ".join(phrases[:boundary])),
-                    gap,
-                    self._call,
-                    gap,
                     self._render_speech(" ".join(phrases[boundary:])),
-                ]
+                ],
+                self._call,
+                rate,
+                boundary=1,
             )
         speech = self._render_speech(text)
-        if position == "start":
-            return np.concatenate([self._call, gap, speech])
-        return np.concatenate([speech, gap, self._call])
+        return join_call([speech], self._call, rate, boundary=0 if position == "start" else 1)
+
+    def _render_triggered(self, text: str):
+        """Replace configured text cues with audio before pronunciation rewrites."""
+        voice = self._voice.config.espeak_voice
+        parts = self._trigger_pattern.split(text)
+        allowed = self._vocalization_gate.allow(len(parts) > 1)
+        if len(parts) == 1:
+            return self._render_speech(for_piper(text, voice))
+        # Strip every cue even when playback is suppressed. Join the remaining
+        # words before TTS so suppressing a sound does not break the intonation.
+        cleaned = [part.lstrip(" \t\n,;:.!?…\"'„“”").strip() for part in parts]
+        if not allowed:
+            spoken = " ".join(part for part in cleaned if any(c.isalnum() for c in part))
+            return (
+                self._render_speech(for_piper(spoken, voice))
+                if spoken
+                else np.zeros(0, dtype=np.float32)
+            )
+        if self.vocalization_position == "varied":
+            spoken = " ".join(part for part in cleaned if any(c.isalnum() for c in part))
+            if spoken:
+                position = self._vocalization_gate.choose_position(
+                    can_insert_between=len(split_phrases(spoken)) > 1
+                )
+                return self._render_positioned(for_piper(spoken, voice), position)
+        # Play only the first cue, removing any later cues from this reply.
+        parts = [
+            cleaned[0],
+            " ".join(part for part in cleaned[1:] if any(c.isalnum() for c in part)),
+        ]
+        speech = []
+        for part in parts:
+            # Punctuation following a removed cue should not become a spoken
+            # fragment or an extra initial pause. Keep ending punctuation so
+            # questions and exclamations before a laugh retain their delivery.
+            spoken = part.lstrip(" \t\n,;:.!?…\"'„“”")
+            if any(c.isalnum() for c in spoken):
+                speech.append(self._render_speech(for_piper(spoken, voice)))
+            else:
+                speech.append(np.zeros(0, dtype=np.float32))
+        return join_replacements(speech, self._call, self._voice.config.sample_rate)
 
     def render(self, text: str, path: Path) -> None:
         """Write the reply with optional recorded call, effects and loudness."""
-        text = for_piper(text, self._voice.config.espeak_voice)
+        if self.vocalization_position not in ("trigger", "varied"):
+            text = for_piper(text, self._voice.config.espeak_voice)
         audio = self._render_with_call(text)
+        if len(audio) == 0:
+            write_wav(path, audio, self._voice.config.sample_rate)
+            return
 
         with tempfile.TemporaryDirectory(prefix="evil-jarvis-raw-") as directory:
             raw_path = Path(directory) / "raw.wav"

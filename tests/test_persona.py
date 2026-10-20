@@ -1,4 +1,6 @@
 import os
+import wave
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -8,7 +10,7 @@ from click.testing import CliRunner
 
 from evil_jarvis import conversation, telemetry
 from evil_jarvis.cli import main, parse_args
-from evil_jarvis.persona import builtin_personas, load_persona
+from evil_jarvis.persona import builtin_dir, builtin_personas, load_persona
 from evil_jarvis.tts.per_language import PerLanguageSpeaker
 from evil_jarvis.tts.piper import PiperSpeaker, voice_files
 
@@ -69,6 +71,94 @@ def test_persona_from_a_file(persona_file):
     assert persona.profile("en").reply_problem("one two three four five six") == (
         "too long (6 words)"
     )
+
+
+@pytest.fixture
+def persona_bundle(tmp_path):
+    folder = tmp_path / "talking-pumpkin"
+    assets = folder / "assets"
+    assets.mkdir(parents=True)
+    with wave.open(str(assets / "laugh.wav"), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(16000)
+        output.writeframes(b"\x01\x00" * 160)
+    config = MINIMAL.replace("speed = 1.1", 'speed = 1.1\nvocalization = "assets/laugh.wav"')
+    (folder / "persona.toml").write_text(config, encoding="utf-8")
+    return folder
+
+
+@pytest.mark.parametrize("as_folder", [True, False])
+def test_persona_asset_is_relative_to_toml_not_working_directory(
+    persona_bundle, monkeypatch, as_folder, tmp_path
+):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    path = persona_bundle if as_folder else persona_bundle / "persona.toml"
+    persona = load_persona(str(path))
+    assert persona.voice.vocalization == "assets/laugh.wav"
+    assert persona.vocalization_audio == (persona_bundle / "assets/laugh.wav").read_bytes()
+
+
+def test_missing_persona_asset_names_the_file(persona_bundle):
+    (persona_bundle / "assets/laugh.wav").rename(persona_bundle / "assets/other.wav")
+    with pytest.raises(ValueError, match=r"vocalization file not found: assets/laugh.wav"):
+        load_persona(str(persona_bundle))
+
+
+def test_invalid_persona_wav_fails_at_load(persona_bundle):
+    (persona_bundle / "assets/laugh.wav").write_bytes(b"not audio")
+    with pytest.raises(ValueError, match="invalid vocalization WAV"):
+        load_persona(str(persona_bundle))
+
+
+def test_custom_trigger_is_automatically_explained_to_model(persona_bundle, responder_with):
+    config = persona_bundle / "persona.toml"
+    text = config.read_text().replace(
+        'vocalization = "assets/laugh.wav"',
+        'vocalization = "assets/laugh.wav"\n'
+        'vocalization_position = "trigger"\n'
+        'vocalization_triggers = ["snicker"]',
+    )
+    config.write_text(text)
+    persona = load_persona(str(persona_bundle))
+    responder = responder_with(["Snicker. Welcome, visitor."], persona=persona)
+    assert responder.reply("Hello?", "en") == "Snicker. Welcome, visitor."
+    messages, _ = responder._model.calls[0]
+    assert '"snicker"' in messages[0]["content"]
+    assert "recording instead of speech" in messages[0]["content"]
+
+
+@pytest.mark.parametrize("asset", ["/tmp/laugh.wav", "../laugh.wav", "assets/laugh.mp3"])
+def test_persona_assets_must_be_local_wavs(persona_bundle, asset):
+    config = persona_bundle / "persona.toml"
+    config.write_text(config.read_text().replace("assets/laugh.wav", asset))
+    with pytest.raises(ValueError, match=r"relative \.wav path inside the persona"):
+        load_persona(str(persona_bundle))
+
+
+def test_persona_folder_needs_a_toml(tmp_path):
+    with pytest.raises(ValueError, match="Persona file not found"):
+        load_persona(str(tmp_path))
+
+
+def test_builtin_bundles_and_assets_load_from_zip_resources(tmp_path):
+    names = builtin_personas()
+    expected = load_persona("pani-kraka").vocalization_audio
+    root = Path(str(builtin_dir()))
+    archive_path = tmp_path / "personas.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        for path in root.rglob("*"):
+            if path.is_file():
+                archive.write(path, "builtin/" + path.relative_to(root).as_posix())
+    with zipfile.ZipFile(archive_path) as archive:
+        resource_root = zipfile.Path(archive, "builtin/")
+        with mock.patch("evil_jarvis.persona.builtin_dir", return_value=resource_root):
+            assert builtin_personas() == names
+            persona = load_persona("pani-kraka")
+    # Audio remains available after the archive/resource context is closed.
+    assert persona.vocalization_audio == expected
 
 
 @pytest.mark.parametrize(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import wave
 from pathlib import Path
+from typing import BinaryIO
 
 import numpy as np
 
@@ -18,9 +19,10 @@ READ_SCALE = -np.iinfo(np.int16).min
 WRITE_SCALE = np.iinfo(np.int16).max
 
 
-def read_wav(path: str | Path) -> tuple[np.ndarray, int]:
+def read_wav(path: str | Path | BinaryIO) -> tuple[np.ndarray, int]:
     """Float32 samples in [-1, 1] and the sample rate."""
-    with wave.open(str(path), "rb") as handle:
+    source = str(path) if isinstance(path, (str, Path)) else path
+    with wave.open(source, "rb") as handle:
         if handle.getnchannels() != CHANNELS or handle.getsampwidth() != SAMPLE_BYTES:
             raise ValueError(f"Expected 16-bit mono WAV: {path}")
         rate = handle.getframerate()

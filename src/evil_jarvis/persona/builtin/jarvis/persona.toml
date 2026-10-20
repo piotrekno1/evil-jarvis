@@ -1,5 +1,5 @@
 # Jarvis, a polite smart-home assistant that has quietly taken over the house.
-# A smaller example persona; see clown.toml for every available setting.
+# A smaller example persona; see ../clown/persona.toml for every available setting.
 
 name = "jarvis"
 display_name = "Jarvis"

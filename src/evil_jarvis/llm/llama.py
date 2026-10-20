@@ -168,6 +168,9 @@ class LlamaResponder:
 
     def _generate(self, text: str, language: str | None, profile, history=()) -> str:
         system_prompt, user_message = profile.prompt_for(text, language)
+        sound_rule = self.persona.vocalization_rule(language)
+        if sound_rule:
+            system_prompt = f"{system_prompt}\n{sound_rule}"
         if self._disable_thinking:
             user_message = f"/no_think\n{user_message}"
         messages = [{"role": "system", "content": system_prompt}]

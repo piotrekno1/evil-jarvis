@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from evil_jarvis.llm.llama import LlamaResponder
@@ -14,7 +16,6 @@ BAD_REPLIES = [
     ("Księżyc 沒有 pamięta.", "non-Latin"),
     ("Umiesz żonglować? Oczywiście.", "repeats the visitor"),
     (" ".join(["słowo"] * 30), "too long"),
-    (PL.examples[0][1], "copies a style example"),
     ("Tylko ciszę. Ale czasem słyszę... *cichy chichot*", "stage direction"),
     ("Mam! Mam, mam... tylko nie pytaj.", "stutter opening"),
 ]
@@ -22,6 +23,18 @@ BAD_REPLIES = [
 
 def test_good_reply_passes():
     assert PL.reply_problem("Żonglowałem. Teraz żongluje tylko cień.", "Umiesz żonglować?") is None
+
+
+def test_fitting_style_example_can_be_used_once_but_not_repeated():
+    visitor, reply = PL.examples[0]
+    assert PL.reply_problem(reply, visitor) is None
+    assert PL.reply_problem(reply, visitor, previous=(reply,)) == "repeats an earlier reply"
+
+
+def test_copy_check_remains_available_to_personas_that_enable_it():
+    strict = replace(PL, checks=(*PL.checks, "no_example_copy"))
+    visitor, reply = strict.examples[0]
+    assert strict.reply_problem(reply, visitor) == "copies a style example"
 
 
 @pytest.mark.parametrize(

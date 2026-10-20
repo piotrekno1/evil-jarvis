@@ -43,8 +43,7 @@ jarvis-asr-bench = "evil_jarvis.bench.asr:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"evil_jarvis.persona" = ["builtin/*.toml"]
-"evil_jarvis.tts" = ["assets/*.wav", "assets/*.md"]
+"evil_jarvis.persona" = ["builtin/*.toml", "builtin/*/*.toml", "builtin/*/assets/*"]
 
 [dependency-groups]
 dev = [

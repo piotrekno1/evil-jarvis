@@ -16,6 +16,7 @@ from evil_jarvis.tts.per_language import PerLanguageSpeaker
 from evil_jarvis.tts.piper import DEFAULT_VOICE, PiperSpeaker, voice_path
 from evil_jarvis.tts.playback import AudioPlayer
 from evil_jarvis.tts.prosody import PROSODY_STYLES
+from evil_jarvis.tts.vocalization import VocalizationGate
 
 __all__ = [
     "DEFAULT_VOICE",
@@ -47,13 +48,16 @@ def build_speaker(
     speed: float = 1.0,
     prosody: str = "plain",
     output_device: int | str | None = None,
-    vocalization: str | None = None,
+    vocalization_audio: bytes | None = None,
     vocalization_probability: float = 0.65,
     vocalization_position: str = "random",
+    vocalization_triggers: tuple[str, ...] = (),
+    vocalization_min_gap_replies: int = 0,
 ):
     """The main voice, plus one per language when replies may switch language."""
 
     player = AudioPlayer(output_device)
+    sound_gate = VocalizationGate(vocalization_probability, vocalization_min_gap_replies)
 
     def piper(name: str) -> PiperSpeaker:
         return PiperSpeaker(
@@ -62,9 +66,11 @@ def build_speaker(
             speed=speed,
             prosody=prosody,
             player=player,
-            vocalization=vocalization,
+            vocalization_audio=vocalization_audio,
             vocalization_probability=vocalization_probability,
             vocalization_position=vocalization_position,
+            vocalization_triggers=vocalization_triggers,
+            vocalization_gate=sound_gate,
         )
 
     default = piper(voice)

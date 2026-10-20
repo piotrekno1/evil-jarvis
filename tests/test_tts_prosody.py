@@ -17,6 +17,9 @@ PHRASES = ["Raz.", "Dwa?", "Trzy...", "Cztery.", "Pięć!", "Sześć.", "Siedem!
             ["Boisz się?", "To tylko gry...", "HEHE, niespodzianki!"],
         ),
         ("Bez kropki na końcu", ["Bez kropki na końcu"]),
+        ('Ja? Powiedziała: "zejdź mi z oczu!".', ["Ja?", 'Powiedziała: "zejdź mi z oczu!".']),
+        ("Mówi: „Dobry wieczór!” Następne zdanie.", ["Mówi: „Dobry wieczór!”", "Następne zdanie."]),
+        ('"..."', []),
     ],
 )
 def test_split_keeps_whole_sentences_and_punctuation(text, phrases):

@@ -29,8 +29,10 @@ def split_phrases(text: str) -> list[str]:
     Splitting at commas made Piper restart its intonation mid-sentence, which
     sounded like a second speaker interrupting.
     """
-    parts = re.findall(r"[^.!?…]+(?:[.!?…]+|$)", text)
-    return [part.strip() for part in parts if part.strip(" .!?…")]
+    # Closing quotes/brackets (and punctuation following them) belong to the
+    # sentence they close, never to a separate, punctuation-only TTS request.
+    parts = re.findall(r"""[^.!?…]+(?:[.!?…]+(?:["'”\u2019»)\]]+[.!?…]*)?|$)""", text)
+    return [part.strip() for part in parts if any(c.isalnum() for c in part)]
 
 
 def plan_maniacal_delivery(phrases: list[str], rng: random.Random) -> list[PhraseDelivery]:
