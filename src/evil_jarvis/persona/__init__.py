@@ -7,6 +7,7 @@ The reply checks themselves are in checks.py.
 
 from __future__ import annotations
 
+import math
 import re
 import tomllib
 import unicodedata
@@ -24,6 +25,7 @@ DEFAULT_PERSONA = "clown"
 LANGUAGE_NAMES = {"pl": "Polish", "en": "English", "de": "German", "fr": "French", "es": "Spanish"}
 ANY_LANGUAGE_RULE = "Reply entirely in the language used in the visitor's statement."
 GENERIC_LABELS = ("assistant", "reply")
+MAX_IDLE_SOUND_SECONDS = 2
 
 
 @dataclass(frozen=True)
@@ -100,6 +102,17 @@ class VoiceSettings:
 
 
 @dataclass(frozen=True)
+class IdleSettings:
+    """Persona-owned nonverbal sounds and their quiet-time schedule."""
+
+    sounds: tuple[str, ...] = ()
+    after_seconds: float = 30.0
+    min_interval_seconds: float = 45.0
+    max_interval_seconds: float = 90.0
+    gain: float = 0.4
+
+
+@dataclass(frozen=True)
 class Persona:
     name: str
     languages: dict[str, LanguageProfile]
@@ -111,6 +124,8 @@ class Persona:
     voice: VoiceSettings = field(default_factory=VoiceSettings)
     source: str = ""
     vocalization_audio: bytes | None = field(default=None, repr=False)
+    idle: IdleSettings = field(default_factory=IdleSettings)
+    idle_audio: tuple[bytes, ...] = field(default=(), repr=False)
 
     def profile(self, language: str | None) -> LanguageProfile:
         return self.languages.get(language or "", self.languages["default"])
@@ -153,6 +168,7 @@ _PERSONA_KEYS = {
     "labels",
     "voice",
     "languages",
+    "idle",
 }
 _PROFILE_KEYS = {
     "system_prompt",
@@ -209,27 +225,57 @@ def parse_profile(language: str, data: dict) -> LanguageProfile:
     )
 
 
-def read_vocalization(voice: dict, root: Traversable) -> bytes | None:
+def read_audio_asset(name, root: Traversable, label: str) -> bytes:
     """Read a persona-owned WAV, including from an installed package resource."""
-    name = voice.get("vocalization")
-    if name is None:
-        return None
     if not isinstance(name, str):
-        raise ValueError("[voice] vocalization must be a relative .wav path")
+        raise ValueError(f"{label} must be a relative .wav path")
     path = PurePosixPath(name)
     if path.is_absolute() or ".." in path.parts or path.suffix.lower() != ".wav":
-        raise ValueError("[voice] vocalization must be a relative .wav path inside the persona")
+        raise ValueError(f"{label} must be a relative .wav path inside the persona")
     asset = root.joinpath(*path.parts)
     if not asset.is_file():
-        raise ValueError(f"[voice] vocalization file not found: {name}")
+        raise ValueError(f"{label} file not found: {name}")
     audio = asset.read_bytes()
     try:
         samples, rate = read_wav(BytesIO(audio))
         if len(samples) == 0 or rate <= 0:
             raise ValueError("WAV contains no audio")
     except (ValueError, wave.Error, EOFError) as exc:
-        raise ValueError(f"[voice] invalid vocalization WAV {name}: {exc}") from exc
+        raise ValueError(f"{label}: invalid vocalization WAV {name}: {exc}") from exc
     return audio
+
+
+def parse_idle(data: dict, root: Traversable) -> tuple[IdleSettings, tuple[bytes, ...]]:
+    allowed = {"sounds", "after_seconds", "min_interval_seconds", "max_interval_seconds", "gain"}
+    if not isinstance(data, dict):
+        raise ValueError("[idle] must be a table")
+    reject_unknown("[idle]", data, allowed)
+    sounds = data.get("sounds", [])
+    if not isinstance(sounds, list) or not all(isinstance(s, str) and s for s in sounds):
+        raise ValueError("[idle] sounds must be a list of WAV paths")
+    if len(set(sounds)) != len(sounds):
+        raise ValueError("[idle] sounds must not contain duplicate paths")
+    values = {key: data[key] for key in allowed - {"sounds"} if key in data}
+    for key, value in values.items():
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            raise ValueError(f"[idle] {key} must be a finite number")
+    settings = IdleSettings(sounds=tuple(sounds), **values)
+    if settings.after_seconds < 0 or settings.min_interval_seconds <= 0:
+        raise ValueError("[idle] delays must be nonnegative, with a positive minimum interval")
+    if settings.max_interval_seconds < settings.min_interval_seconds:
+        raise ValueError("[idle] maximum interval must be at least the minimum interval")
+    if not 0 < settings.gain <= 1:
+        raise ValueError("[idle] gain must be greater than zero and at most one")
+    audio = tuple(read_audio_asset(name, root, "[idle] sound") for name in sounds)
+    for name, clip in zip(sounds, audio, strict=True):
+        samples, rate = read_wav(BytesIO(clip))
+        if len(samples) / rate > MAX_IDLE_SOUND_SECONDS:
+            raise ValueError(f"[idle] sound must be at most 2 seconds: {name}")
+    return settings, audio
 
 
 def parse_persona(
@@ -262,7 +308,13 @@ def parse_persona(
     gap = voice.get("vocalization_min_gap_replies", 0)
     if type(gap) is not int or gap < 0:
         raise ValueError("[voice] vocalization_min_gap_replies must be a nonnegative integer")
-    audio = read_vocalization(voice, asset_root if asset_root is not None else Path(source).parent)
+    root = asset_root if asset_root is not None else Path(source).parent
+    audio = (
+        read_audio_asset(voice["vocalization"], root, "[voice] vocalization")
+        if voice.get("vocalization") is not None
+        else None
+    )
+    idle, idle_audio = parse_idle(data.get("idle", {}), root)
     by_language = voice.get("by_language", {})
     if not isinstance(by_language, dict) or not all(
         isinstance(v, str) for v in by_language.values()
@@ -281,6 +333,8 @@ def parse_persona(
         voice=VoiceSettings(**voice),
         source=source,
         vocalization_audio=audio,
+        idle=idle,
+        idle_audio=idle_audio,
         **top,
     )
 

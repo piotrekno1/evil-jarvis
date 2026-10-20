@@ -126,12 +126,24 @@ class VoiceActivityRecorder:
         )
         logger.info("Listening threshold: %.4f (ambient %.4f)", self._threshold, baseline)
 
-    def capture(self, on_listening=None) -> np.ndarray | None:
+    def _play_idle(self, action) -> None:
+        """Discard microphone input during playback without reopening its stream."""
+        self._listening.clear()
+        self._drain()
+        try:
+            action()
+        finally:
+            self._drain()
+            self._listening.set()
+
+    def capture(self, on_listening=None, on_idle=None) -> np.ndarray | None:
         """Wait for and return one utterance, or None for a discarded noise.
 
         on_listening is called once the stream is running and calibrated, i.e.
         the moment speech will actually be heard. Audio that arrived while not
         capturing (for example the character's own voice) is discarded.
+        on_idle may supply a short playback action during quiet frames. Detection
+        pauses for the action; queued playback audio and the old preroll are dropped.
         """
         cfg = self.config
         start_frames = max(1, cfg.speech_start_ms // cfg.frame_ms)
@@ -159,6 +171,11 @@ class VoiceActivityRecorder:
                 level = self.rms(frame)
                 logger.debug("level=%.4f threshold=%.4f", level, self._threshold)
                 consecutive_loud = consecutive_loud + 1 if level >= self._threshold else 0
+                if consecutive_loud == 0 and on_idle is not None and self._frames.empty():
+                    action = on_idle()
+                    if action is not None:
+                        self._play_idle(action)
+                        preroll.clear()
 
             logger.info("Voice detected; recording...")
             frames = list(preroll)

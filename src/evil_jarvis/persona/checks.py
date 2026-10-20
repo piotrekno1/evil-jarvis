@@ -102,6 +102,26 @@ def no_repeat(reply, words, visitor, previous, examples):
     return None
 
 
+def no_reused_phrase(reply, words, visitor, previous, examples):
+    """Reject recycled three-word slogans unless the visitor is asking about one."""
+    size = SAME_OPENING_WORDS
+
+    def phrases(text):
+        tokens = re.findall(r"\w+", normalize_text(text))
+        return {
+            tuple(tokens[i : i + size])
+            for i in range(len(tokens) - size + 1)
+            if len(set(tokens[i : i + size])) > 1
+        }
+
+    asked_about = phrases(visitor)
+    reused = set().union(*(phrases(answer) for answer in previous)) - asked_about
+    repeated = phrases(reply) & reused
+    if repeated:
+        return f"reuses phrase '{' '.join(sorted(repeated)[0])}'"
+    return None
+
+
 # Checks a persona can turn on, run in this order. Empty replies are always
 # rejected, and `max_words` adds a length check.
 CHECKS = {
@@ -113,4 +133,5 @@ CHECKS = {
     "no_echo_opening": no_echo_opening,
     "no_example_copy": no_example_copy,
     "no_repeat": no_repeat,
+    "no_reused_phrase": no_reused_phrase,
 }

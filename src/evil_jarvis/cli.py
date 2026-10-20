@@ -12,6 +12,7 @@ import wildedge
 
 from evil_jarvis import __version__, stt
 from evil_jarvis.conversation import run_text_loop, run_voice_loop
+from evil_jarvis.idle import build_idle_sounds
 from evil_jarvis.llm import DEFAULT_MODEL as DEFAULT_LLM_MODEL
 from evil_jarvis.llm import build_responder
 from evil_jarvis.microphone import DetectorConfig, VoiceActivityRecorder
@@ -33,6 +34,7 @@ from evil_jarvis.tts import (
     SilentSpeaker,
     build_speaker,
 )
+from evil_jarvis.tts.playback import AudioPlayer
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +132,7 @@ def parse_device(value: str | None) -> int | str | None:
 )
 @click.option("--piper-speed", type=float, help="Speaking speed (1.2 = 20% faster).")
 @click.option("--no-speech", is_flag=True, help="Print replies instead of speaking them.")
+@click.option("--no-idle", is_flag=True, help="Disable the persona's idle sounds.")
 # Audio devices
 @click.option("--input-device", help="Microphone: sounddevice device ID or name.")
 @click.option("--output-device", help="Speaker: sounddevice device ID or name.")
@@ -258,6 +261,7 @@ def parse_args(argv=()) -> SimpleNamespace:
 
 def run(args, persona: Persona, telemetry) -> None:
     responder = build_responder(args.llm_model, persona, args.memory_seconds, telemetry)
+    player = AudioPlayer(parse_device(args.output_device)) if not args.no_speech else None
     speaker = (
         SilentSpeaker()
         if args.no_speech
@@ -268,6 +272,7 @@ def run(args, persona: Persona, telemetry) -> None:
             speed=args.piper_speed,
             prosody=args.prosody,
             output_device=parse_device(args.output_device),
+            player=player,
             vocalization_audio=persona.vocalization_audio,
             vocalization_probability=persona.voice.vocalization_probability,
             vocalization_position=persona.voice.vocalization_position,
@@ -276,7 +281,11 @@ def run(args, persona: Persona, telemetry) -> None:
         )
     )
     if args.text_only:
-        run_text_loop(responder, speaker, telemetry, language=args.language)
+        try:
+            run_text_loop(responder, speaker, telemetry, language=args.language)
+        finally:
+            if player is not None:
+                player.close()
         return
 
     hint = persona.profile(args.language).asr_hint
@@ -295,15 +304,26 @@ def run(args, persona: Persona, telemetry) -> None:
     asr_handle = telemetry.register_transcriber(
         *stt.telemetry_model(args.stt_engine, args.whisper_model)
     )
-    run_voice_loop(
-        recorder,
-        transcriber,
-        responder,
-        speaker,
-        telemetry=telemetry,
-        asr_handle=asr_handle,
-        cooldown_seconds=args.cooldown_seconds,
+    idle = (
+        build_idle_sounds(persona, player, args.voice_effect)
+        if not args.no_idle and player is not None
+        else None
     )
+    try:
+        run_voice_loop(
+            recorder,
+            transcriber,
+            responder,
+            speaker,
+            telemetry=telemetry,
+            asr_handle=asr_handle,
+            cooldown_seconds=args.cooldown_seconds,
+            idle=idle,
+        )
+    finally:
+        recorder.close()
+        if player is not None:
+            player.close()
 
 
 if __name__ == "__main__":

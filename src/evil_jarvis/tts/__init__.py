@@ -53,10 +53,11 @@ def build_speaker(
     vocalization_position: str = "random",
     vocalization_triggers: tuple[str, ...] = (),
     vocalization_min_gap_replies: int = 0,
+    player: AudioPlayer | None = None,
 ):
     """The main voice, plus one per language when replies may switch language."""
 
-    player = AudioPlayer(output_device)
+    player = player if player is not None else AudioPlayer(output_device)
     sound_gate = VocalizationGate(vocalization_probability, vocalization_min_gap_replies)
 
     def piper(name: str) -> PiperSpeaker:

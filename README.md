@@ -218,7 +218,11 @@ checks = ["no_symbols", "no_stage_directions", "no_echo", "no_repeat"]
 ```
 
 Available checks: `latin_only`, `no_symbols`, `no_stage_directions`,
-`not_english`, `no_echo`, `no_echo_opening`, `no_example_copy`, `no_repeat`. Empty replies are
+`not_english`, `no_echo`, `no_echo_opening`, `no_example_copy`, `no_repeat`,
+`no_reused_phrase`. The clown uses `no_reused_phrase` to reject three-word phrases
+recycled from recent replies, unless the visitor is explicitly asking about that
+phrase. Repetition retries ask the model for a new idea and different wording.
+Empty replies are
 always rejected.
 
 ## Telemetry

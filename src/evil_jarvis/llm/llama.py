@@ -197,6 +197,20 @@ class LlamaResponder:
                 return reply
             logger.info("Rejected model reply (%s): %r", problem, reply[:80])
             rejections.append(problem)
+            if problem.startswith(("reuses phrase", "repeats an earlier reply")):
+                repair = (
+                    "Poprzednia propozycja powtarza wcześniejszą odpowiedź. "
+                    "Odpowiedz wprost na ostatnią wypowiedź gościa, używając nowego pomysłu "
+                    "i innych sformułowań. Nie odtwarzaj poprzedniej puenty."
+                    if (language or self.persona.language) == "pl"
+                    else "Your last proposal repeats an earlier reply. Address the visitor's "
+                    "latest statement with a new idea and different wording. "
+                    "Do not recycle an earlier punchline."
+                )
+                messages = [
+                    {"role": "system", "content": f"{system_prompt}\n{repair}"},
+                    *messages[1:],
+                ]
         logger.warning("No usable reply after %d attempts; staying silent", profile.attempts)
         info["source"] = "silent"
         return ""

@@ -75,12 +75,24 @@ def run_text_loop(responder, speaker, telemetry, language: str | None = None) ->
 
 
 def run_voice_loop(
-    recorder, transcriber, responder, speaker, *, telemetry, asr_handle=None, cooldown_seconds=1.0
+    recorder,
+    transcriber,
+    responder,
+    speaker,
+    *,
+    telemetry,
+    asr_handle=None,
+    cooldown_seconds=1.0,
+    idle=None,
 ) -> None:
     """Visitor speech comes from the microphone."""
     sample_rate = recorder.config.sample_rate
     while True:
-        samples = recorder.capture()
+        samples = (
+            recorder.capture(on_listening=idle.reset, on_idle=idle.next_action)
+            if idle is not None
+            else recorder.capture()
+        )
         if samples is None:
             continue
         started = time.perf_counter()  # the visitor just stopped talking

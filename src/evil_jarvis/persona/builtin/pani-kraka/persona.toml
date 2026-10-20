@@ -19,6 +19,13 @@ vocalization_triggers = ["kra", "caw", "kra-kra", "kra kra", "caw-caw", "caw caw
 [voice.by_language]
 en = "en_US-lessac-high"
 
+[idle]
+sounds = ["assets/crow.wav", "assets/idle-beak.wav", "assets/idle-feathers.wav"]
+after_seconds = 30
+min_interval_seconds = 45
+max_interval_seconds = 90
+gain = 0.4
+
 [languages.default]
 attempts = 3
 temperature = 0.8

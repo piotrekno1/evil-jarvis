@@ -205,6 +205,13 @@ def banner(args, persona: Persona, telemetry_line: str) -> str:
         ("metrics", telemetry_line),
         ("input", input_line),
     ]
+    if persona.idle.sounds and not (args.no_speech or args.text_only or args.no_idle):
+        idle = persona.idle
+        rows.append((
+            "idle", f"{len(idle.sounds)} sounds after {idle.after_seconds:g} s quiet, then "
+            f"every {idle.min_interval_seconds:g}–{idle.max_interval_seconds:g} s; "
+            "microphone briefly paused",
+        ))
     return "\n".join(["", f"  🎪  {title}", *(f"  {name:8}: {value}" for name, value in rows), ""])
 
 

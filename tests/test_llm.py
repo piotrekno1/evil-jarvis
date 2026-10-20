@@ -73,6 +73,28 @@ def test_repeating_an_earlier_reply_is_rejected(reply, problem):
     assert PL.reply_problem(reply, "Masz?", ("Mam jeden. Trochę się rusza.",)) == problem
 
 
+def test_repeated_slogan_is_rejected_even_at_a_different_position():
+    previous = ("Maska ma tylko jeden uśmiech. Tylko dla odważnych.",)
+    reply = "Ta kurtyna jest tylko dla odważnych."
+    assert PL.reply_problem(reply, "Jaka znowu kurtyna?", previous).startswith("reuses phrase")
+
+
+def test_visitor_can_ask_for_an_explanation_of_a_previous_phrase():
+    previous = ("Bilety są tylko dla odważnych.",)
+    assert (
+        PL.reply_problem(
+            "Hasło tylko dla odważnych to mój kiepski żart.",
+            "Co znaczy tylko dla odważnych?",
+            previous,
+        )
+        is None
+    )
+
+
+def test_laugh_syllables_are_not_treated_as_a_recycled_slogan():
+    assert PL.reply_problem("Niespodzianka. Hi hi hi.", "Co jest?", ("Witaj. Hi hi hi.",)) is None
+
+
 def test_polish_goes_to_the_model(responder_with):
     responder = responder_with(["Mam jeden. Trochę się rusza."])
     assert responder.reply("Masz cukierka?", language="pl") == "Mam jeden. Trochę się rusza."
@@ -163,3 +185,24 @@ def test_zero_disables_memory(remembering):
     responder.reply("A ile masz lat?", language="pl")
     messages, _ = responder._model.calls[1]
     assert {"role": "assistant", "content": "Grinwick. Hehe!"} not in messages
+
+
+def test_recycled_phrase_gets_a_retry_with_conversation_feedback(remembering):
+    responder = remembering(
+        [
+            "Maska ma jeden uśmiech. Tylko dla odważnych.",
+            "Cukierki są tylko dla odważnych.",
+            "Częstuj się. Papierek sam wybiera właściciela.",
+        ]
+    )
+    responder.reply("Kim jesteś?", "pl")
+    responder.clock.now += 1
+    assert (
+        responder.reply("Masz cukierki?", "pl") == "Częstuj się. Papierek sam wybiera właściciela."
+    )
+    assert responder.last_reply_info["attempts"] == 2
+    assert responder.last_reply_info["rejections"] == ["reuses phrase 'tylko dla odwaznych'"]
+    retry_messages, _ = responder._model.calls[-1]
+    first_messages, _ = responder._model.calls[0]
+    assert "używając nowego pomysłu" in retry_messages[0]["content"]
+    assert "używając nowego pomysłu" not in first_messages[0]["content"]
