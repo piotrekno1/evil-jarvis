@@ -77,6 +77,14 @@ class PolishGenerationTests(unittest.TestCase):
         self.assertEqual(responder.reply("Masz cukierka?", language="pl"), "Mam, ale gryzie.")
         self.assertEqual(len(responder._model.calls), 2)
 
+    def test_markdown_bold_is_kept_without_asterisks(self):
+        responder = responder_with(["Jestem w nastroju do... **strasznych psikusów**!"])
+        self.assertEqual(
+            responder.reply("Jak się dzisiaj miewasz?", language="pl"),
+            "Jestem w nastroju do... strasznych psikusów!",
+        )
+        self.assertEqual(len(responder._model.calls), 1)
+
     def test_clown_stays_silent_when_every_attempt_fails(self):
         responder = responder_with(["the and you"] * PL.attempts)
         self.assertEqual(responder.reply("Masz cukierka?", language="pl"), "")

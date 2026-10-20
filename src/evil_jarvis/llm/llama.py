@@ -184,6 +184,8 @@ class LlamaResponder:
             result = self._complete(messages=messages, **profile.generation_params)
             content = str(result["choices"][0]["message"]["content"])
             reply = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            # Markdown bold is emphasis, not a stage direction: keep the words.
+            reply = re.sub(r"\*\*([^*]+)\*\*", r"\1", reply)
             # Small local models sometimes echo the transcript despite instructions.
             reply = self.strip_transcript_echo(reply, text, self.persona.all_labels)
             problem = profile.reply_problem(reply, text, previous)
