@@ -135,7 +135,7 @@ uploads voice clips. If you capture, tell visitors they are being recorded.
 ## Development
 
 ```bash
-uv run python -m unittest discover -s tests
+uv run pytest
 uv run ruff format .
 uv run ruff check --fix .
 ```

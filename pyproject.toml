@@ -46,7 +46,13 @@ where = ["src"]
 "evil_jarvis.persona" = ["builtin/*.toml"]
 
 [dependency-groups]
-dev = ["ruff>=0.17"]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
@@ -76,6 +82,7 @@ select = [
   "TID",      # tidy imports
   "TID253",   # banned top-level imports (list below); not part of "TID"
   "ISC",      # implicit string concatenation
+  "PT",       # pytest style: plain assert, pytest.raises, parametrize
 ]
 ignore = [
   "PLR0913",  # too many arguments: pipeline steps take several parts; PLR0917 still limits positional ones

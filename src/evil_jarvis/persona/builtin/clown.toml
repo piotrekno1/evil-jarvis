@@ -19,7 +19,7 @@ labels = ["grinwick", "clown", "klaun", "odpowiedź", "odpowiedz"]
 # Piper voice settings; voices live in models/piper. Command-line flags override them.
 [voice]
 voice = "pl_PL-bass-high"
-effect = "metallic-demon"
+effect = "metallic"
 prosody = "maniacal"
 
 # Piper voice per language; `voice` above is used for every other language.

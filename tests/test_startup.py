@@ -1,163 +1,173 @@
 import os
-import tempfile
-import unittest
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 from evil_jarvis import download, startup
 from evil_jarvis.cli import parse_args
 from evil_jarvis.persona import load_persona
+
+MISSING_FILES = ["--llm-model", "/nope.gguf", "--whisper-model", "/nope-whisper"]
+MISSING_FILES += ["--voice", "en_US-joe-medium"]
 
 
 def args_for(*argv):
     return parse_args([*argv, "--env-file", "/nonexistent"])
 
 
-class EnvFileTests(unittest.TestCase):
-    def test_sets_only_missing_variables(self):
-        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as handle:
-            handle.write(
-                "# comment\nexport A_TEST_DSN='https://x@y/z'\nB_TEST=from-file\n\nnot a setting\n"
-            )
-        with mock.patch.dict(os.environ, {"B_TEST": "already-set"}, clear=False):
-            loaded = startup.load_env_file(Path(handle.name))
-            self.assertEqual(os.environ["A_TEST_DSN"], "https://x@y/z")
-            self.assertEqual(os.environ["B_TEST"], "already-set")
-        self.assertEqual(loaded, ["A_TEST_DSN"])
-        self.assertNotIn("A_TEST_DSN", os.environ)  # patch.dict restored the environment
-
-    def test_missing_file_is_fine(self):
-        self.assertEqual(startup.load_env_file(Path("/nonexistent/.env")), [])
+# .env file
 
 
-class BannerTests(unittest.TestCase):
-    def test_banner_describes_the_run(self):
-        args = args_for("--persona", "jarvis", "--language", "auto", "--text-only")
-        text = startup.banner(args, load_persona("jarvis"), "off")
-        self.assertIn("Evil Jarvis · Jarvis", text)
-        self.assertIn("typed text (any language)", text)
-        self.assertIn(
-            "Piper pl_PL-darkman-medium, metallic effect, plain intonation; "
-            "English: en_GB-alan-medium",
-            text,
-        )
-        self.assertIn("Bielik-4.5B-v3.0-Instruct.Q8_0", text)
-
-    def test_banner_without_speech(self):
-        args = args_for("--no-speech")
-        text = startup.banner(args, load_persona("clown"), "off")
-        self.assertIn("off (replies printed)", text)
-
-    def test_banner_names_the_hardware(self):
-        args = args_for(
-            "--stt-engine", "faster-whisper", "--whisper-model", "/m/whisper-large-v3-turbo-ct2"
-        )
-        with mock.patch.object(startup.stt, "faster_whisper_device", return_value="cuda"):
-            self.assertIn(
-                "large-v3-turbo-ct2 (faster-whisper) on the NVIDIA GPU",
-                startup.banner(args, load_persona("clown"), "off"),
-            )
-        with mock.patch.object(startup.stt, "faster_whisper_device", return_value="cpu"):
-            self.assertIn(
-                "an NVIDIA GPU is recommended", startup.banner(args, load_persona("clown"), "off")
-            )
-        with mock.patch.object(startup.llm, "gpu_offload_supported", return_value=False):
-            self.assertIn("CPU only", startup.banner(args, load_persona("clown"), "off"))
-
-    def test_telemetry_line(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            self.assertIn("set WILDEDGE_DSN", startup.telemetry_summary("off"))
-        with mock.patch.dict(
-            os.environ, {"WILDEDGE_DSN": "https://s@example.invalid/k"}, clear=True
-        ):
-            self.assertIn("transcripts and replies are uploaded", startup.telemetry_summary("text"))
-            self.assertIn("timings and metadata only", startup.telemetry_summary("off"))
+def test_env_file_sets_only_missing_variables(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# comment\nexport A_TEST_DSN='https://x@y/z'\nB_TEST=from-file\n\nnot a setting\n"
+    )
+    with mock.patch.dict(os.environ, {"B_TEST": "already-set"}):
+        loaded = startup.load_env_file(env_file)
+        assert os.environ["A_TEST_DSN"] == "https://x@y/z"
+        assert os.environ["B_TEST"] == "already-set"
+    assert loaded == ["A_TEST_DSN"]
+    assert "A_TEST_DSN" not in os.environ  # patch.dict restored the environment
 
 
-class RequirementTests(unittest.TestCase):
-    def test_every_missing_file_is_listed(self):
-        args = args_for(
-            "--llm-model",
-            "/nope.gguf",
-            "--whisper-model",
-            "/nope-whisper",
-            "--voice",
-            "en_US-joe-medium",
-        )
-        problems = "\n".join(startup.missing_requirements(args))
-        self.assertIn("LLM not found: /nope.gguf (check --llm-model)", problems)
-        self.assertIn("Whisper model not found: /nope-whisper (check --whisper-model)", problems)
-        self.assertIn("en_US-joe-medium.onnx (run with --download)", problems)
-
-    def test_only_default_models_and_known_voices_are_downloadable(self):
-        args = args_for(
-            "--llm-model",
-            "/nope.gguf",
-            "--whisper-model",
-            "/nope-whisper",
-            "--voice",
-            "en_US-joe-medium",
-        )
-        self.assertEqual([item.what for item in startup.missing_downloads(args)], ["Piper voice"])
-        with tempfile.TemporaryDirectory() as models:
-            fake = Path(models)
-            with (
-                mock.patch.object(startup.llm, "DEFAULT_MODEL", fake / "llm.gguf"),
-                mock.patch.dict(
-                    startup.stt.MODELS,
-                    {key: (fake / key, repo) for key, (_, repo) in startup.stt.MODELS.items()},
-                ),
-            ):
-                args = args_for("--llm-model", str(fake / "llm.gguf"), "--no-speech")
-                args.whisper_model = str(
-                    startup.stt.MODELS[startup.stt.model_key(args.stt_engine)][0]
-                )
-                self.assertEqual(
-                    [item.what for item in startup.missing_downloads(args)],
-                    ["LLM", "Whisper model"],
-                )
-
-    def test_url_download_is_atomic(self):
-
-        with tempfile.TemporaryDirectory() as directory:
-            source, target = Path(directory) / "src.bin", Path(directory) / "out" / "voice.onnx"
-            source.write_bytes(b"voice")
-            download.urls([(source.as_uri(), target)])()
-            self.assertEqual(target.read_bytes(), b"voice")
-            self.assertFalse(target.with_name("voice.onnx.part").exists())
-
-    def test_missing_packages_name_the_extras(self):
-        with mock.patch.object(startup, "installed", return_value=False):
-            problems = startup.missing_requirements(args_for())
-        self.assertEqual(
-            problems[-1], "install the missing packages with: uv sync --extra models --extra voice"
-        )
-
-    def test_text_run_needs_only_the_llm(self):
-        with tempfile.NamedTemporaryFile(suffix=".gguf") as model:
-            args = args_for("--text-only", "--no-speech", "--llm-model", model.name)
-            with mock.patch.object(startup, "installed", return_value=True):
-                self.assertEqual(startup.missing_requirements(args), [])
-
-    def test_install_hints_match_the_system(self):
-        with mock.patch.object(startup.sys, "platform", "linux"):
-            self.assertEqual(startup.system_package("ffmpeg", "ffmpeg"), "sudo apt install ffmpeg")
-        with mock.patch.object(startup.sys, "platform", "darwin"):
-            self.assertEqual(
-                startup.system_package("portaudio", "libportaudio2"), "brew install portaudio"
-            )
-
-    def test_mlx_is_refused_off_apple_silicon(self):
-        args = args_for("--stt-engine", "mlx")
-        with mock.patch.object(startup.stt, "apple_silicon", return_value=False):
-            self.assertIn(
-                "needs an Apple Silicon Mac", "\n".join(startup.missing_requirements(args))
-            )
-
-    def test_every_language_voice_is_checked(self):
-        args = args_for("--language", "auto")
-        self.assertEqual(startup.piper_voices(args), ["pl_PL-bass-high", "en_US-ryan-high"])
+def test_missing_env_file_is_fine():
+    assert startup.load_env_file(Path("/nonexistent/.env")) == []
 
 
-if __name__ == "__main__":
-    unittest.main()
+# Banner
+
+
+def test_banner_describes_the_run():
+    args = args_for("--persona", "jarvis", "--language", "auto", "--text-only")
+    text = startup.banner(args, load_persona("jarvis"), "off")
+    assert "Evil Jarvis · Jarvis" in text
+    assert "typed text (any language)" in text
+    assert (
+        "Piper pl_PL-darkman-medium, metallic effect, plain intonation; "
+        "English: en_GB-alan-medium" in text
+    )
+    assert "Bielik-4.5B-v3.0-Instruct.Q8_0" in text
+
+
+def test_banner_without_speech():
+    text = startup.banner(args_for("--no-speech"), load_persona("clown"), "off")
+    assert "off (replies printed)" in text
+
+
+@pytest.mark.parametrize(
+    ("module", "function", "returns", "expected"),
+    [
+        (
+            startup.stt,
+            "faster_whisper_device",
+            "cuda",
+            "large-v3-turbo-ct2 (faster-whisper) on the NVIDIA GPU",
+        ),
+        (startup.stt, "faster_whisper_device", "cpu", "an NVIDIA GPU is recommended"),
+        (startup.llm, "gpu_offload_supported", False, "CPU only"),
+    ],
+)
+def test_banner_names_the_hardware(module, function, returns, expected):
+    args = args_for(
+        "--stt-engine", "faster-whisper", "--whisper-model", "/m/whisper-large-v3-turbo-ct2"
+    )
+    with mock.patch.object(module, function, return_value=returns):
+        assert expected in startup.banner(args, load_persona("clown"), "off")
+
+
+@pytest.mark.parametrize(
+    ("env", "capture", "expected"),
+    [
+        ({}, "off", "set WILDEDGE_DSN"),
+        (
+            {"WILDEDGE_DSN": "https://s@example.invalid/k"},
+            "text",
+            "transcripts and replies are uploaded",
+        ),
+        ({"WILDEDGE_DSN": "https://s@example.invalid/k"}, "off", "timings and metadata only"),
+    ],
+)
+def test_telemetry_line(env, capture, expected):
+    with mock.patch.dict(os.environ, env, clear=True):
+        assert expected in startup.telemetry_summary(capture)
+
+
+# Requirements
+
+
+@pytest.mark.parametrize(
+    "problem",
+    [
+        "LLM not found: /nope.gguf (check --llm-model)",
+        "Whisper model not found: /nope-whisper (check --whisper-model)",
+        "en_US-joe-medium.onnx (run with --download)",
+    ],
+)
+def test_every_missing_file_is_listed(problem):
+    assert problem in "\n".join(startup.missing_requirements(args_for(*MISSING_FILES)))
+
+
+def test_custom_models_are_not_downloadable():
+    assert [item.what for item in startup.missing_downloads(args_for(*MISSING_FILES))] == [
+        "Piper voice"
+    ]
+
+
+def test_default_models_are_downloadable(tmp_path):
+    with (
+        mock.patch.object(startup.llm, "DEFAULT_MODEL", tmp_path / "llm.gguf"),
+        mock.patch.dict(
+            startup.stt.MODELS,
+            {key: (tmp_path / key, repo) for key, (_, repo) in startup.stt.MODELS.items()},
+        ),
+    ):
+        args = args_for("--llm-model", str(tmp_path / "llm.gguf"), "--no-speech")
+        args.whisper_model = str(startup.stt.MODELS[startup.stt.model_key(args.stt_engine)][0])
+        assert [item.what for item in startup.missing_downloads(args)] == ["LLM", "Whisper model"]
+
+
+def test_url_download_is_atomic(tmp_path):
+    source, target = tmp_path / "src.bin", tmp_path / "out" / "voice.onnx"
+    source.write_bytes(b"voice")
+    download.urls([(source.as_uri(), target)])()
+    assert target.read_bytes() == b"voice"
+    assert not target.with_name("voice.onnx.part").exists()
+
+
+def test_missing_packages_name_the_extras():
+    with mock.patch.object(startup, "installed", return_value=False):
+        problems = startup.missing_requirements(args_for())
+    assert problems[-1] == "install the missing packages with: uv sync --extra models --extra voice"
+
+
+def test_text_run_needs_only_the_llm(tmp_path):
+    model = tmp_path / "model.gguf"
+    model.touch()
+    args = args_for("--text-only", "--no-speech", "--llm-model", str(model))
+    with mock.patch.object(startup, "installed", return_value=True):
+        assert startup.missing_requirements(args) == []
+
+
+@pytest.mark.parametrize(
+    ("platform", "name", "package", "hint"),
+    [
+        ("linux", "ffmpeg", "ffmpeg", "sudo apt install ffmpeg"),
+        ("darwin", "portaudio", "libportaudio2", "brew install portaudio"),
+    ],
+)
+def test_install_hints_match_the_system(platform, name, package, hint):
+    with mock.patch.object(startup.sys, "platform", platform):
+        assert startup.system_package(name, package) == hint
+
+
+def test_mlx_is_refused_off_apple_silicon():
+    args = args_for("--stt-engine", "mlx")
+    with mock.patch.object(startup.stt, "apple_silicon", return_value=False):
+        assert "needs an Apple Silicon Mac" in "\n".join(startup.missing_requirements(args))
+
+
+def test_every_language_voice_is_checked():
+    args = args_for("--language", "auto")
+    assert startup.piper_voices(args) == ["pl_PL-bass-high", "en_US-ryan-high"]

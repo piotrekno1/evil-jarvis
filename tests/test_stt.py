@@ -1,10 +1,9 @@
 import sys
-import tempfile
-import unittest
 from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
+import pytest
 
 from evil_jarvis import stt
 from evil_jarvis.cli import parse_args
@@ -14,66 +13,68 @@ from evil_jarvis.stt.mlx_whisper import MlxWhisperTranscriber
 from evil_jarvis.wav import SPEECH_SAMPLE_RATE, write_wav
 
 
-class RunawayGuardTests(unittest.TestCase):
-    def test_normal_polish_sentence_passes(self):
-        self.assertFalse(is_runaway_transcript("Czy księżyc pamięta twój cyrk?", 2.0, "pl"))
-
-    def test_repeated_word_loop_is_caught(self):
-        self.assertTrue(
-            is_runaway_transcript("Tanty, chomu, duchy, duchy, duchy, duchy", 2.0, "pl")
-        )
-
-    def test_too_many_words_for_clip_length_is_caught(self):
-        self.assertTrue(is_runaway_transcript(" ".join(f"slowo{i}" for i in range(20)), 2.0, "pl"))
-
-    def test_foreign_script_in_polish_is_caught(self):
-        self.assertTrue(
-            is_runaway_transcript("Wilczynski intentλλaje pyta沒有 Costume?", 2.0, "pl")
-        )
-
-    def test_subtitle_phrases_are_caught(self):
-        self.assertTrue(is_runaway_transcript("Dzięki za oglądanie!", 1.5, "pl"))
-        self.assertTrue(is_runaway_transcript("Thanks for watching.", 1.5, "en"))
-        self.assertTrue(
-            is_runaway_transcript("Napisy stworzone przez społeczność Amara.org", 3.0, "pl")
-        )
-        self.assertFalse(is_runaway_transcript("Dzięki za cukierka!", 1.5, "pl"))
-
-    def test_empty_transcript_is_not_runaway(self):
-        self.assertFalse(is_runaway_transcript("", 2.0, "pl"))
+@pytest.mark.parametrize(
+    ("text", "seconds", "language", "runaway"),
+    [
+        ("Czy księżyc pamięta twój cyrk?", 2.0, "pl", False),
+        ("Tanty, chomu, duchy, duchy, duchy, duchy", 2.0, "pl", True),  # repeated word loop
+        (" ".join(f"slowo{i}" for i in range(20)), 2.0, "pl", True),  # too many words
+        ("Wilczynski intentλλaje pyta沒有 Costume?", 2.0, "pl", True),  # foreign script
+        ("Dzięki za oglądanie!", 1.5, "pl", True),  # subtitle phrases
+        ("Thanks for watching.", 1.5, "en", True),
+        ("Napisy stworzone przez społeczność Amara.org", 3.0, "pl", True),
+        ("Dzięki za cukierka!", 1.5, "pl", False),
+        ("", 2.0, "pl", False),
+    ],
+)
+def test_runaway_transcripts_are_caught(text, seconds, language, runaway):
+    assert is_runaway_transcript(text, seconds, language) == runaway
 
 
-class MlxTranscriberTests(unittest.TestCase):
-    def test_missing_model_explains_how_to_download(self):
-        with self.assertRaisesRegex(ValueError, "--download"):
-            MlxWhisperTranscriber("/not/a/model")
-
-    def test_no_speech_flag_is_available(self):
-        self.assertTrue(parse_args(["--no-speech"]).no_speech)
-
-    def test_polish_is_the_default_language(self):
-        self.assertEqual(parse_args([]).language, "pl")
-
-    def test_engine_follows_the_hardware(self):
-        with mock.patch.object(stt, "apple_silicon", return_value=True):
-            self.assertEqual(stt.default_engine(), "mlx")
-        with mock.patch.object(stt, "apple_silicon", return_value=False):
-            self.assertEqual(stt.default_engine(), "faster-whisper")
-        self.assertEqual(parse_args([]).stt_engine, stt.default_engine())
-
-    def test_cpu_gets_the_small_model(self):
-        self.assertEqual(
-            stt.default_model("faster-whisper", device="cuda").name, "whisper-large-v3-turbo-ct2"
-        )
-        self.assertEqual(
-            stt.default_model("faster-whisper", device="cpu").name, "whisper-small-ct2"
-        )
-        self.assertEqual(stt.default_model("mlx").name, "whisper-large-v3-turbo-mlx")
+def test_missing_mlx_model_explains_how_to_download():
+    with pytest.raises(ValueError, match="--download"):
+        MlxWhisperTranscriber("/not/a/model")
 
 
-class FasterWhisperTests(unittest.TestCase):
-    def make(self, text, device=None):
+def test_no_speech_flag_is_available():
+    assert parse_args(["--no-speech"]).no_speech
 
+
+def test_polish_is_the_default_language():
+    assert parse_args([]).language == "pl"
+
+
+@pytest.mark.parametrize(("apple", "engine"), [(True, "mlx"), (False, "faster-whisper")])
+def test_engine_follows_the_hardware(apple, engine):
+    with mock.patch.object(stt, "apple_silicon", return_value=apple):
+        assert stt.default_engine() == engine
+
+
+def test_default_engine_is_used_by_the_cli():
+    assert parse_args([]).stt_engine == stt.default_engine()
+
+
+@pytest.mark.parametrize(
+    ("engine", "device", "model"),
+    [
+        ("faster-whisper", "cuda", "whisper-large-v3-turbo-ct2"),
+        ("faster-whisper", "cpu", "whisper-small-ct2"),
+        ("mlx", None, "whisper-large-v3-turbo-mlx"),
+    ],
+)
+def test_cpu_gets_the_small_model(engine, device, model):
+    options = {"device": device} if device else {}
+    assert stt.default_model(engine, **options).name == model
+
+
+@pytest.fixture
+def transcriber(monkeypatch, tmp_path):
+    """Builds a FasterWhisperTranscriber over a fake model that always hears `text`.
+
+    Returns (transcriber, the device and compute type the model was created with).
+    """
+
+    def make(text, device=None):
         created = {}
 
         class FakeModel:
@@ -83,38 +84,38 @@ class FasterWhisperTests(unittest.TestCase):
             def transcribe(self, audio, **options):
                 return [SimpleNamespace(text=text)], SimpleNamespace(language="pl")
 
-        fake = SimpleNamespace(WhisperModel=FakeModel)
-        directory = tempfile.mkdtemp()
-        with mock.patch.dict(sys.modules, {"faster_whisper": fake}):
-            transcriber = module.FasterWhisperTranscriber(directory, "pl", device=device)
-        return transcriber, created
+        monkeypatch.setitem(sys.modules, "faster_whisper", SimpleNamespace(WhisperModel=FakeModel))
+        return module.FasterWhisperTranscriber(str(tmp_path), "pl", device=device), created
 
-    def wav(self, seconds=1.0):
-
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as handle:
-            path = handle.name
-        write_wav(path, np.zeros(int(SPEECH_SAMPLE_RATE * seconds), dtype=np.float32))
-        return path
-
-    def test_gpu_uses_float16_and_cpu_int8(self):
-        _, created = self.make("x", device="cuda")
-        self.assertEqual(created, {"device": "cuda", "compute_type": "float16"})
-        _, created = self.make("x", device="cpu")
-        self.assertEqual(created, {"device": "cpu", "compute_type": "int8"})
-
-    def test_device_is_detected(self):
-        with mock.patch("evil_jarvis.stt.faster_whisper.cuda_available", return_value=True):
-            transcriber, _ = self.make("x")
-        self.assertEqual(transcriber.device, "cuda")
-
-    def test_runaway_transcripts_are_discarded(self):
-        transcriber, _ = self.make("duchy duchy duchy duchy duchy", device="cpu")
-        self.assertEqual(transcriber.transcribe(self.wav()), "")
-        self.assertTrue(transcriber.last_discarded)
-        transcriber, _ = self.make("Masz cukierka?", device="cpu")
-        self.assertEqual(transcriber.transcribe(self.wav()), "Masz cukierka?")
-        self.assertEqual(transcriber.last_language, "pl")
+    return make
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture
+def silent_wav(tmp_path):
+    path = tmp_path / "clip.wav"
+    write_wav(path, np.zeros(SPEECH_SAMPLE_RATE, dtype=np.float32))
+    return str(path)
+
+
+@pytest.mark.parametrize(("device", "compute_type"), [("cuda", "float16"), ("cpu", "int8")])
+def test_gpu_uses_float16_and_cpu_int8(transcriber, device, compute_type):
+    _, created = transcriber("x", device=device)
+    assert created == {"device": device, "compute_type": compute_type}
+
+
+def test_device_is_detected(transcriber, monkeypatch):
+    monkeypatch.setattr(module, "cuda_available", lambda: True)
+    whisper, _ = transcriber("x")
+    assert whisper.device == "cuda"
+
+
+def test_runaway_transcript_is_discarded(transcriber, silent_wav):
+    whisper, _ = transcriber("duchy duchy duchy duchy duchy", device="cpu")
+    assert whisper.transcribe(silent_wav) == ""
+    assert whisper.last_discarded
+
+
+def test_normal_transcript_is_kept(transcriber, silent_wav):
+    whisper, _ = transcriber("Masz cukierka?", device="cpu")
+    assert whisper.transcribe(silent_wav) == "Masz cukierka?"
+    assert whisper.last_language == "pl"

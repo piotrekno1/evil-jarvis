@@ -2,10 +2,9 @@ import sys
 import threading
 import time
 import types
-import unittest
-from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from evil_jarvis.microphone import DetectorConfig, VoiceActivityRecorder
 
@@ -13,11 +12,8 @@ from evil_jarvis.microphone import DetectorConfig, VoiceActivityRecorder
 class FakeStream:
     """Feeds frames through the callback like PortAudio, then silence."""
 
-    instances = 0
-
-    def __init__(self, frames, frame_samples, callback=None, **_):
-        FakeStream.instances += 1
-        self._frames = list(frames)
+    def __init__(self, frame_samples, callback=None, **_):
+        self._frames = []
         self._silence = np.zeros(frame_samples, dtype=np.float32)
         self._callback = callback
         self._running = False
@@ -42,66 +38,67 @@ class FakeStream:
         self.closed = True
 
 
-def fake_sounddevice(stream_holder, frames, n):
-    def make(**kwargs):
-        stream = FakeStream(frames, n, **kwargs)
-        stream_holder.append(stream)
-        return stream
+@pytest.fixture
+def listening(monkeypatch):
+    """Opens a recorder on a fake microphone; returns (recorder, every stream opened).
 
-    return types.SimpleNamespace(InputStream=make)
+    Frames only flow while the recorder listens, so pushed frames wait for capture().
+    """
+    recorders = []
 
+    def make(cfg):
+        streams = []
 
-class RecorderTests(unittest.TestCase):
-    def setUp(self):
-        FakeStream.instances = 0
+        def open_stream(**kwargs):
+            streams.append(FakeStream(cfg.frame_samples, **kwargs))
+            return streams[-1]
 
-    def test_soft_onset_before_loud_speech_is_kept(self):
-        cfg = DetectorConfig(calibration_seconds=0.02, preroll_ms=300, speech_start_ms=240)
-        n = cfg.frame_samples
-        silence = [np.zeros(n, np.float32)] * 20
-        soft = [np.full(n, 0.002 + i / 2000, np.float32) for i in range(10)]  # below threshold
-        loud = [np.full(n, 0.2, np.float32)] * 30
-        frames = [np.zeros(n, np.float32), *silence, *soft, *loud]  # first frame calibrates
-        holder = []
-        listened = []
-        recorder = VoiceActivityRecorder(cfg)
-        # Frames only flow while listening; hold them back until capture starts.
-        with patch.dict(sys.modules, {"sounddevice": fake_sounddevice(holder, [], n)}):
-            recorder._ensure_stream()
-            holder[0].ready = recorder._listening.is_set
-            holder[0].push(frames)
-            samples = recorder.capture(on_listening=lambda: listened.append(1))
-        recorder.close()
-
-        self.assertEqual(listened, [1])
-        lead_in_frames = 300 // cfg.frame_ms
-        first_kept = samples[: lead_in_frames * n].reshape(lead_in_frames, n)
-        kept_soft = sum(1 for f in first_kept if 0 < f[0] < 0.1)
-        self.assertEqual(kept_soft, 10)
-
-    def test_stream_is_opened_once_and_audio_between_captures_is_dropped(self):
-        cfg = DetectorConfig(
-            calibration_seconds=0.02, speech_start_ms=60, min_speech_ms=60, silence_ms=100
+        monkeypatch.setitem(
+            sys.modules, "sounddevice", types.SimpleNamespace(InputStream=open_stream)
         )
-        n = cfg.frame_samples
-        loud = [np.full(n, 0.2, np.float32)] * 10
-        holder = []
         recorder = VoiceActivityRecorder(cfg)
-        with patch.dict(sys.modules, {"sounddevice": fake_sounddevice(holder, [], n)}):
-            recorder._ensure_stream()
-            holder[0].ready = recorder._listening.is_set
-            holder[0].push([np.zeros(n, np.float32), *loud])  # quiet frame calibrates
-            self.assertIsNotNone(recorder.capture())
-            # Loud audio while the clown "speaks" must not leak into the next capture.
-            recorder._frames.put(np.full(n, 0.9, np.float32))
-            holder[0].push(loud)
-            second = recorder.capture()
+        recorders.append(recorder)
+        recorder._ensure_stream()
+        streams[0].ready = recorder._listening.is_set
+        return recorder, streams
+
+    yield make
+    for recorder in recorders:
         recorder.close()
 
-        self.assertEqual(FakeStream.instances, 1)
-        self.assertTrue(holder[0].closed)
-        self.assertLess(float(np.max(second)), 0.5)
+
+def test_soft_onset_before_loud_speech_is_kept(listening):
+    cfg = DetectorConfig(calibration_seconds=0.02, preroll_ms=300, speech_start_ms=240)
+    n = cfg.frame_samples
+    silence = [np.zeros(n, np.float32)] * 20
+    soft = [np.full(n, 0.002 + i / 2000, np.float32) for i in range(10)]  # below threshold
+    loud = [np.full(n, 0.2, np.float32)] * 30
+    recorder, streams = listening(cfg)
+    streams[0].push([np.zeros(n, np.float32), *silence, *soft, *loud])  # first frame calibrates
+    listened = []
+    samples = recorder.capture(on_listening=lambda: listened.append(1))
+
+    assert listened == [1]
+    lead_in_frames = 300 // cfg.frame_ms
+    first_kept = samples[: lead_in_frames * n].reshape(lead_in_frames, n)
+    assert sum(1 for f in first_kept if 0 < f[0] < 0.1) == 10
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_stream_is_opened_once_and_audio_between_captures_is_dropped(listening):
+    cfg = DetectorConfig(
+        calibration_seconds=0.02, speech_start_ms=60, min_speech_ms=60, silence_ms=100
+    )
+    n = cfg.frame_samples
+    loud = [np.full(n, 0.2, np.float32)] * 10
+    recorder, streams = listening(cfg)
+    streams[0].push([np.zeros(n, np.float32), *loud])  # quiet frame calibrates
+    assert recorder.capture() is not None
+    # Loud audio while the clown "speaks" must not leak into the next capture.
+    recorder._frames.put(np.full(n, 0.9, np.float32))
+    streams[0].push(loud)
+    second = recorder.capture()
+    recorder.close()
+
+    assert len(streams) == 1
+    assert streams[0].closed
+    assert float(np.max(second)) < 0.5
