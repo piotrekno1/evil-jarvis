@@ -14,6 +14,7 @@ import numpy as np
 from evil_jarvis.paths import MODELS_DIR
 from evil_jarvis.tts.effects import piper_effect_chain
 from evil_jarvis.tts.playback import AudioPlayer
+from evil_jarvis.tts.pronunciation import for_piper
 from evil_jarvis.tts.prosody import (
     PROSODY_STYLES,
     fade_edges,
@@ -104,6 +105,7 @@ class PiperSpeaker:
     def render(self, text: str, path: Path) -> None:
         """Write the fully processed reply (prosody + effect + loudness) to a WAV."""
 
+        text = for_piper(text, self._voice.config.espeak_voice)
         if self.prosody == "plain":
             audio = self._synthesize(text, 1.0 / self.speed, erratic=False)
         else:

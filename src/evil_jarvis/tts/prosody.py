@@ -47,12 +47,13 @@ def plan_maniacal_delivery(phrases: list[str], rng: random.Random) -> list[Phras
         mood = rng.choices(moods, weights=weights)[0]
         if index == len(phrases) - 1 and len(phrases) > 1 and phrase.endswith("!"):
             mood = "shout"
+        # Top speed 1.15: at 1.3 Polish words blurred (2026-10-20 pipeline check).
         speed, gain = {
-            "bright": (rng.uniform(1.05, 1.15), 1.0),
-            "rush": (rng.uniform(1.18, 1.3), 1.0),
+            "bright": (rng.uniform(1.03, 1.1), 1.0),
+            "rush": (rng.uniform(1.1, 1.15), 1.0),
             "aside": (rng.uniform(0.88, 0.95), 0.7),
             "normal": (rng.uniform(0.97, 1.03), 0.95),
-            "shout": (rng.uniform(1.05, 1.12), 1.15),
+            "shout": (rng.uniform(1.03, 1.08), 1.15),
         }[mood]
         gap_ms = 0 if index == 0 else rng.randint(60, 260)
         if mood == "aside":
