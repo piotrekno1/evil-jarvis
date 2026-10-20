@@ -268,6 +268,9 @@ def run(args, persona: Persona, telemetry) -> None:
             speed=args.piper_speed,
             prosody=args.prosody,
             output_device=parse_device(args.output_device),
+            vocalization=persona.voice.vocalization,
+            vocalization_probability=persona.voice.vocalization_probability,
+            vocalization_position=persona.voice.vocalization_position,
         )
     )
     if args.text_only:

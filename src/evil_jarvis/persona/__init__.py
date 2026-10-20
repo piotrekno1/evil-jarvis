@@ -83,6 +83,9 @@ class VoiceSettings:
     effect: str | None = None
     prosody: str | None = None
     speed: float | None = None
+    vocalization: str | None = None
+    vocalization_probability: float = 0.65
+    vocalization_position: str = "random"
     # Voice per language code, e.g. {"en": "en_US-ryan-high"}; `voice` covers the rest.
     by_language: dict[str, str] = field(default_factory=dict)
 
@@ -134,7 +137,16 @@ _PROFILE_KEYS = {
     "user_template",
     "asr_hint",
 }
-_VOICE_KEYS = {"voice", "effect", "prosody", "speed", "by_language"}
+_VOICE_KEYS = {
+    "voice",
+    "effect",
+    "prosody",
+    "speed",
+    "by_language",
+    "vocalization",
+    "vocalization_probability",
+    "vocalization_position",
+}
 
 
 def reject_unknown(where: str, data: dict, allowed: set[str]) -> None:
@@ -171,6 +183,13 @@ def parse_persona(data: dict, source: str = "") -> Persona:
         raise ValueError("A persona needs a [languages.default] section")
     voice = data.get("voice", {})
     reject_unknown("[voice]", voice, _VOICE_KEYS)
+    if voice.get("vocalization") not in (None, "crow"):
+        raise ValueError("[voice] vocalization must be 'crow'")
+    if voice.get("vocalization_position", "random") not in ("random", "start", "end", "between"):
+        raise ValueError("[voice] vocalization_position must be random, start, end or between")
+    probability = voice.get("vocalization_probability", 0.65)
+    if not isinstance(probability, (int, float)) or not 0 <= probability <= 1:
+        raise ValueError("[voice] vocalization_probability must be between 0 and 1")
     by_language = voice.get("by_language", {})
     if not isinstance(by_language, dict) or not all(
         isinstance(v, str) for v in by_language.values()

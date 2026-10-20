@@ -10,6 +10,9 @@ voice = "pl_PL-darkman-medium"
 effect = "clean"
 prosody = "plain"
 speed = 1.05
+vocalization = "crow"
+vocalization_probability = 0.65
+vocalization_position = "random"
 
 [voice.by_language]
 en = "en_US-lessac-high"

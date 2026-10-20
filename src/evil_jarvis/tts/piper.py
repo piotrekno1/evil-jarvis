@@ -7,13 +7,14 @@ import random
 import shutil
 import subprocess
 import tempfile
+from importlib import resources
 from pathlib import Path
 
 import numpy as np
 
 from evil_jarvis.paths import MODELS_DIR
 from evil_jarvis.tts.effects import piper_effect_chain
-from evil_jarvis.tts.playback import AudioPlayer
+from evil_jarvis.tts.playback import AudioPlayer, resample
 from evil_jarvis.tts.pronunciation import for_piper
 from evil_jarvis.tts.prosody import (
     PROSODY_STYLES,
@@ -21,7 +22,7 @@ from evil_jarvis.tts.prosody import (
     plan_maniacal_delivery,
     split_phrases,
 )
-from evil_jarvis.wav import write_wav
+from evil_jarvis.wav import read_wav, write_wav
 
 logger = logging.getLogger(__name__)
 DEFAULT_VOICE = "pl_PL-bass-high"
@@ -62,7 +63,16 @@ class PiperSpeaker:
         prosody: str = "maniacal",
         seed: int | None = None,
         player: AudioPlayer | None = None,
+        vocalization: str | None = None,
+        vocalization_probability: float = 0.65,
+        vocalization_position: str = "random",
     ):
+        if vocalization not in (None, "crow"):
+            raise ValueError("Unknown vocalization; choose crow")
+        if not 0 <= vocalization_probability <= 1:
+            raise ValueError("vocalization_probability must be between 0 and 1")
+        if vocalization_position not in ("random", "start", "end", "between"):
+            raise ValueError("vocalization_position must be random, start, end or between")
         path = Path(voice_path).expanduser()
         if not path.is_file() or not path.with_suffix(".onnx.json").is_file():
             raise ValueError(
@@ -88,6 +98,20 @@ class PiperSpeaker:
         self.prosody = prosody
         self._rng = random.Random(seed)
         self._player = player
+        self.vocalization_probability = vocalization_probability
+        self.vocalization_position = vocalization_position
+        self._call = None
+        if vocalization:
+            asset = resources.files("evil_jarvis.tts") / "assets" / "crow.wav"
+            with resources.as_file(asset) as asset_path:
+                samples, rate = read_wav(asset_path)
+            self._call = (
+                fade_edges(
+                    resample(samples, rate, self._voice.config.sample_rate),
+                    rate=self._voice.config.sample_rate,
+                )
+                * 0.65
+            )
 
     def _synthesize(self, text: str, length_scale: float, erratic: bool):
 
@@ -102,24 +126,57 @@ class PiperSpeaker:
         ]
         return np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
 
-    def render(self, text: str, path: Path) -> None:
-        """Write the fully processed reply (prosody + effect + loudness) to a WAV."""
-
-        text = for_piper(text, self._voice.config.espeak_voice)
+    def _render_speech(self, text: str):
         if self.prosody == "plain":
-            audio = self._synthesize(text, 1.0 / self.speed, erratic=False)
-        else:
-            phrases = split_phrases(text) or [text]
-            pieces = []
-            for phrase, delivery in zip(
-                phrases, plan_maniacal_delivery(phrases, self._rng), strict=True
-            ):
-                raw = self._synthesize(phrase, 1.0 / (delivery.speed * self.speed), erratic=True)
-                gap = int(self._voice.config.sample_rate * delivery.gap_ms / 1000)
-                pieces.append(np.zeros(gap, dtype=np.float32))
-                pieces.append(fade_edges(raw) * delivery.gain)
-                logger.debug("phrase %r: %s", phrase, delivery)
-            audio = np.concatenate(pieces)
+            return self._synthesize(text, 1.0 / self.speed, erratic=False)
+        phrases = split_phrases(text) or [text]
+        pieces = []
+        for phrase, delivery in zip(
+            phrases, plan_maniacal_delivery(phrases, self._rng), strict=True
+        ):
+            raw = self._synthesize(phrase, 1.0 / (delivery.speed * self.speed), erratic=True)
+            gap = int(self._voice.config.sample_rate * delivery.gap_ms / 1000)
+            pieces.append(np.zeros(gap, dtype=np.float32))
+            pieces.append(fade_edges(raw) * delivery.gain)
+            logger.debug("phrase %r: %s", phrase, delivery)
+        return np.concatenate(pieces)
+
+    def _render_with_call(self, text: str):
+        """Insert at most one recorded call, never splitting a spoken sentence."""
+        if (
+            self._call is None
+            or not text.strip()
+            or self._rng.random() >= self.vocalization_probability
+        ):
+            return self._render_speech(text)
+        phrases = split_phrases(text)
+        position = self.vocalization_position
+        if position == "random":
+            positions = ["start", "end"]
+            if len(phrases) > 1:
+                positions.append("between")
+            position = self._rng.choice(positions)
+        gap = np.zeros(int(self._voice.config.sample_rate * 0.12), dtype=np.float32)
+        if position == "between" and len(phrases) > 1:
+            boundary = self._rng.randrange(1, len(phrases))
+            return np.concatenate(
+                [
+                    self._render_speech(" ".join(phrases[:boundary])),
+                    gap,
+                    self._call,
+                    gap,
+                    self._render_speech(" ".join(phrases[boundary:])),
+                ]
+            )
+        speech = self._render_speech(text)
+        if position == "start":
+            return np.concatenate([self._call, gap, speech])
+        return np.concatenate([speech, gap, self._call])
+
+    def render(self, text: str, path: Path) -> None:
+        """Write the reply with optional recorded call, effects and loudness."""
+        text = for_piper(text, self._voice.config.espeak_voice)
+        audio = self._render_with_call(text)
 
         with tempfile.TemporaryDirectory(prefix="evil-jarvis-raw-") as directory:
             raw_path = Path(directory) / "raw.wav"

@@ -47,6 +47,9 @@ def build_speaker(
     speed: float = 1.0,
     prosody: str = "plain",
     output_device: int | str | None = None,
+    vocalization: str | None = None,
+    vocalization_probability: float = 0.65,
+    vocalization_position: str = "random",
 ):
     """The main voice, plus one per language when replies may switch language."""
 
@@ -54,7 +57,14 @@ def build_speaker(
 
     def piper(name: str) -> PiperSpeaker:
         return PiperSpeaker(
-            str(voice_path(name)), effect=effect, speed=speed, prosody=prosody, player=player
+            str(voice_path(name)),
+            effect=effect,
+            speed=speed,
+            prosody=prosody,
+            player=player,
+            vocalization=vocalization,
+            vocalization_probability=vocalization_probability,
+            vocalization_position=vocalization_position,
         )
 
     default = piper(voice)

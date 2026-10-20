@@ -69,6 +69,25 @@ uv run evil-jarvis --persona pani-kraka --language auto --download
 uv run evil-jarvis --persona madame-nevermore --language auto --download
 ```
 
+Pani Kraka also inserts a recorded crow call in about 65% of spoken replies.
+It can play before speech, after it, or between complete sentences. Only one
+call plays per reply; a single sentence is never interrupted. The call works
+in either language and does not depend on the model writing a sound cue.
+
+In her TOML `[voice]` section, `vocalization_probability` controls frequency
+(`0` disables calls, `1` always plays one). Set `vocalization_position` to
+`"start"`, `"end"`, `"between"` or `"random"`; `"between"` falls back to the end
+when there is only one sentence. The opt-in `vocalization = "crow"` setting
+enables the bundled [CC0 recording](src/evil_jarvis/tts/assets/README.md).
+
+To compare all three placements without using the microphone or LLM:
+
+```bash
+uv run python benchmarks/crow_preview.py
+```
+
+This writes three Polish voice previews to `recordings/crow-preview/`.
+
 Answer in whichever language each visitor speaks, instead of only the
 persona's language:
 
