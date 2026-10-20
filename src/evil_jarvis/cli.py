@@ -26,7 +26,7 @@ from evil_jarvis.startup import (
     missing_requirements,
     telemetry_summary,
 )
-from evil_jarvis.telemetry import CAPTURE_LEVELS, Telemetry
+from evil_jarvis.telemetry import CAPTURE_LEVELS, Telemetry, attachment_filter
 from evil_jarvis.tts import (
     DEFAULT_VOICE,
     EFFECT_NAMES,
@@ -191,12 +191,18 @@ def main(**options) -> None:
     # Before any model is created: the onnx integration (Piper) patches at load
     # time. attachments_enabled is explicit so WILDEDGE_ATTACHMENTS_ENABLED in
     # the environment can never turn uploads on by itself.
+    integrations = [] if args.no_speech else ["onnx"]
+    whisper = "mlx_whisper" if args.stt_engine == "mlx" else "faster_whisper"
+    auto_transcription = not args.text_only and whisper in wildedge.WildEdge.SUPPORTED_INTEGRATIONS
+    if auto_transcription:
+        integrations.append(whisper)
     client = wildedge.init(
-        integrations=[] if args.no_speech else ["onnx"],
+        integrations=integrations,
         app_version=__version__,
         attachments_enabled=args.wildedge_capture != "off",
+        attachment_filter=attachment_filter(args.wildedge_capture),
     )
-    telemetry = Telemetry(client, args.wildedge_capture)
+    telemetry = Telemetry(client, args.wildedge_capture, auto_transcription=auto_transcription)
 
     try:
         run(args, persona, telemetry)

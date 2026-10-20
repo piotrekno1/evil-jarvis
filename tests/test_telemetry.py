@@ -207,3 +207,51 @@ def test_exchange_outcomes(responder_with):
         conversation.run_text_loop(responder, conversation.SilentSpeaker(), Recorder(), "pl")
     assert [s[0] for s in spans] == ["exchange", "reply", "speak"]
     assert spans[0][1] == responder._conversation_id
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        ("off", []),
+        ("text", ["text/plain", "application/json"]),
+        ("audio", ["text/plain", "application/json", "audio/wav"]),
+    ],
+)
+def test_automatic_attachment_filter(mode, expected):
+    attachments = [
+        wildedge.Attachment(content_type=kind, role="input", data=b"data")
+        for kind in ("text/plain", "application/json", "audio/wav", "image/png")
+    ]
+    assert [
+        item.content_type for item in telemetry.attachment_filter(mode)(attachments)
+    ] == expected
+
+
+def test_automatic_transcription_does_not_register_manual_handle():
+    client = mock.MagicMock()
+    observed = telemetry.Telemetry(client, auto_transcription=True)
+    assert observed.register_transcriber("whisper", "mlx") is None
+    client.register_model.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("engine", "integration"), [("mlx", "mlx_whisper"), ("faster-whisper", "faster_whisper")]
+)
+@pytest.mark.parametrize("supported", [False, True])
+def test_cli_selects_whisper_with_manual_fallback(engine, integration, supported):
+    available = {integration} if supported else set()
+    with (
+        mock.patch.dict(os.environ, {}, clear=True),
+        mock.patch.object(cli, "missing_requirements", return_value=[]),
+        mock.patch.object(cli, "install_interrupt_watchdog"),
+        mock.patch.object(cli, "run"),
+        mock.patch.object(cli.wildedge.WildEdge, "SUPPORTED_INTEGRATIONS", available),
+        mock.patch.object(cli.wildedge, "init") as init,
+        mock.patch.object(cli, "Telemetry") as wrapper,
+    ):
+        result = CliRunner().invoke(
+            cli.main, ["--env-file", "/nonexistent", "--stt-engine", engine, "--no-speech"]
+        )
+    assert result.exit_code == 0, result.output
+    assert init.call_args.kwargs["integrations"] == ([integration] if supported else [])
+    assert wrapper.call_args.kwargs["auto_transcription"] is supported

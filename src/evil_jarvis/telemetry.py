@@ -48,9 +48,29 @@ def text_attachment(role: str, name: str, text: str) -> wildedge.Attachment:
     return wildedge.Attachment(content_type="text/plain", role=role, data=text.encode(), name=name)
 
 
+def attachment_filter(capture: str):
+    """Enforce the app's capture mode for automatic SDK integrations too."""
+
+    def allowed(attachments):
+        if capture == "off":
+            return []
+        return [
+            item
+            for item in attachments
+            if item.content_type.startswith("text/")
+            or item.content_type == "application/json"
+            or (capture == "audio" and item.content_type.startswith("audio/"))
+        ]
+
+    return allowed
+
+
 class Telemetry:
-    def __init__(self, client: wildedge.WildEdge, capture: str = "off"):
+    def __init__(
+        self, client: wildedge.WildEdge, capture: str = "off", *, auto_transcription: bool = False
+    ):
         self.client = client
+        self.auto_transcription = auto_transcription
         self.capture = capture
         self.run_id = f"clown-{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
         self._exchanges = 0
@@ -102,6 +122,8 @@ class Telemetry:
         return handle
 
     def register_transcriber(self, model_id: str, model_format: str):
+        if self.auto_transcription:
+            return None
         family = "whisper" if "whisper" in model_id else None
         return self.client.register_model(
             None, model_id=model_id, source="local", family=family, model_format=model_format
