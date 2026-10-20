@@ -6,6 +6,10 @@ Turn a Halloween prop into a character that talks back. Put a microphone and a
 speaker inside it, and visitors can have a conversation with it. Everything runs
 on your own machine, so there is no cloud service or account to set up.
 
+Experimental entertainment: AI replies can be inappropriate or frightening despite
+the character's instructions. Read the [safety disclaimer](DISCLAIMER.md) before
+using it with visitors, especially children. Optional telemetry is described below.
+
 Each character has a folder with a TOML definition and optional audio assets.
 The TOML sets the personality, example lines, voice and effects. Four come built
 in, and all speak Polish and English:
@@ -132,6 +136,7 @@ The most useful options are below. `uv run evil-jarvis --help` lists all of them
 | `--memory-seconds N` | Conversation memory, cleared after N seconds of silence. Default 90, `0` disables it. |
 | `--input-device`, `--output-device` | Audio devices. `--list-devices` lists them. |
 | `--silence-ms`, `--threshold-multiplier` | Voice detection tuning. |
+| `--no-idle` | Disable the persona's occasional idle sounds. |
 | `--env-file PATH` | Environment file. Default `.env` in the project. |
 
 ## Personas
@@ -196,6 +201,37 @@ To hear opening, middle and ending placements for both characters, run
 `uv run python benchmarks/vocalization_variety_preview.py`. These audition clips
 force a sound to demonstrate placement; they do not change live frequency.
 
+The clown and Pani Kraka also have three wordless idle sounds each. The clown
+chuckles, sighs or hums; the crow caws, clicks its beak or rustles feathers. The
+beak and feather sounds are stylized procedural effects. Each clip uses the
+character's voice effect and plays at 40% gain after processing. Sources and
+licenses are documented in each persona's assets folder.
+
+The first sound plays after 30 seconds of quiet listening, then at random
+45–90 second intervals, with no consecutive repeats. Conversation activity
+restarts the initial quiet period. Idle sounds do not call the LLM or play while
+recording a visitor, generating a reply or speaking. Microphone detection pauses
+briefly during each short clip and a 150 ms settling period; captured playback
+audio is discarded. Visitors can speak again when the clip finishes.
+
+Idle sounds are enabled in microphone mode. Use `--no-idle` to disable them;
+`--no-speech` and `--text-only` also disable idle playback. To preview all six
+processed clips without starting a conversation, run
+`uv run python benchmarks/idle_preview.py`; files appear in `recordings/idle-preview/`.
+Configure custom clips in the persona's TOML:
+
+```toml
+[idle]
+sounds = ["assets/idle-one.wav", "assets/idle-two.wav"]
+after_seconds = 30
+min_interval_seconds = 45
+max_interval_seconds = 90
+gain = 0.4
+```
+
+Paths are relative to the persona folder. Clips must be mono 16-bit WAV files
+at most two seconds long. Omit `[idle]` to leave a character silent while waiting.
+
 ```toml
 name = "witch"
 display_name = "Witch"
@@ -225,7 +261,40 @@ phrase. Repetition retries ask the model for a new idea and different wording.
 Empty replies are
 always rejected.
 
-## Telemetry
+## Privacy
+
+Speech recognition, reply generation and speech synthesis run locally. In
+microphone mode the input stream stays open; audio is collected while listening
+and discarded during reply playback and idle clips. Voice detection uses loudness,
+so background speech and other sounds can also be captured.
+
+Each detected utterance is written to a temporary WAV for transcription. The
+application attempts to delete it after transcription, including on handled errors;
+a crash or forced termination can leave temporary files behind. Speech synthesis
+also uses temporary audio files. Deletion is ordinary filesystem removal, not
+secure erasure.
+
+Recent visitor text and replies are kept in process memory for conversation
+context. By default, after 90 seconds without a visitor interaction, that context
+is discarded when the next interaction checks it. Use `--memory-seconds 0` to
+disable conversation history. Transcripts and replies are printed to the terminal;
+terminal history, redirected output and external logging can retain them. Some
+preview and benchmark tools intentionally save recordings to disk.
+
+Telemetry is optional and described below. To keep application telemetry disabled,
+leave `WILDEDGE_DSN` unset, including in `.env`. Model downloads contact external
+hosts. Dependencies, external instrumentation and modified configurations may have
+additional data handling behavior.
+
+For an installation, explain microphone use before visitors participate. Before
+enabling content uploads or saving recordings, determine the applicable legal
+basis, notices, retention and access arrangements, including any requirements for
+children. Local processing alone does not establish privacy compliance; see the
+[European Commission's GDPR guidance](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/application-gdpr_en)
+for EU deployments. These notes describe the application, not a complete privacy
+notice for a particular operator or venue.
+
+### Telemetry
 
 Off by default. To send metrics to [WildEdge](https://wildedge.dev), set
 `WILDEDGE_DSN` in `.env`:
@@ -236,7 +305,23 @@ echo 'WILDEDGE_DSN=...' > .env
 
 By default it sends only timings, token counts, model metadata and outcomes.
 `--wildedge-capture text` also uploads transcripts and replies, and `audio` also
-uploads voice clips. If you capture, tell visitors they are being recorded.
+uploads voice clips. Text capture includes the prompts and conversation context
+sent to the model, including content from earlier turns. Diagnostic errors may
+also be sent. The SDK may queue unsent events on disk and retry on a later run;
+uploaded data is subject to the configured service's retention and access settings.
+Disabling future capture does not delete previously queued or uploaded data.
+
+## License
+
+The project's original code and documentation are available under the
+[MIT License](LICENSE), including its warranty disclaimer and limitation of
+liability. See also the [safety disclaimer](DISCLAIMER.md).
+
+Third-party dependencies, downloaded models and Piper voices retain their own
+licenses; the project's MIT license does not relicense them. Check their terms
+before use or redistribution. Bundled recording sources and licenses are documented
+in the [clown assets](src/evil_jarvis/persona/builtin/clown/assets/README.md) and
+[crow assets](src/evil_jarvis/persona/builtin/pani-kraka/assets/README.md) folders.
 
 ## Development
 

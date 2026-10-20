@@ -146,6 +146,7 @@ def test_persona_folder_needs_a_toml(tmp_path):
 def test_builtin_bundles_and_assets_load_from_zip_resources(tmp_path):
     names = builtin_personas()
     expected = load_persona("pani-kraka").vocalization_audio
+    expected_idle = load_persona("pani-kraka").idle_audio
     root = Path(str(builtin_dir()))
     archive_path = tmp_path / "personas.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
@@ -159,6 +160,49 @@ def test_builtin_bundles_and_assets_load_from_zip_resources(tmp_path):
             persona = load_persona("pani-kraka")
     # Audio remains available after the archive/resource context is closed.
     assert persona.vocalization_audio == expected
+    assert persona.idle_audio == expected_idle
+    assert len(persona.idle_audio) == 3
+
+
+def test_idle_asset_is_relative_to_persona_folder(persona_bundle, monkeypatch, tmp_path):
+    config = persona_bundle / "persona.toml"
+    config.write_text(config.read_text() + '\n[idle]\nsounds = ["assets/laugh.wav"]\n')
+    monkeypatch.chdir(tmp_path)
+    persona = load_persona(str(persona_bundle))
+    assert persona.idle_audio == ((persona_bundle / "assets/laugh.wav").read_bytes(),)
+
+
+@pytest.mark.parametrize(
+    ("setting", "message"),
+    [
+        ('sounds = "laugh.wav"', "list of WAV paths"),
+        ('sounds = ["x.wav", "x.wav"]', "duplicate"),
+        ('sounds = ["../laugh.wav"]', "relative .wav path"),
+        ('sounds = ["missing.wav"]', "file not found"),
+        ("gain = 0", "gain"),
+        ("gain = nan", "finite number"),
+        ("after_seconds = true", "finite number"),
+        ("after_seconds = -1", "delays"),
+        ("min_interval_seconds = 0", "delays"),
+        ("max_interval_seconds = 1", "maximum interval"),
+        ("gaim = 0.4", "gaim"),
+    ],
+)
+def test_invalid_idle_config_is_reported(persona_file, setting, message):
+    with pytest.raises(ValueError, match=message):
+        load_persona(persona_file(MINIMAL + "\n[idle]\n" + setting))
+
+
+def test_idle_clip_must_be_short(persona_bundle):
+    config = persona_bundle / "persona.toml"
+    config.write_text(config.read_text() + '\n[idle]\nsounds = ["assets/laugh.wav"]\n')
+    with wave.open(str(persona_bundle / "assets/laugh.wav"), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(16000)
+        output.writeframes(b"\x01\x00" * 32001)
+    with pytest.raises(ValueError, match="at most 2 seconds"):
+        load_persona(str(persona_bundle))
 
 
 @pytest.mark.parametrize(

@@ -1,10 +1,12 @@
 import random
 import shutil
+from itertools import pairwise
 from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
 
+from evil_jarvis.conversation import run_voice_loop
 from evil_jarvis.idle import IdleSounds, build_idle_sounds, prepare_idle_clip
 from evil_jarvis.persona import IdleSettings, load_persona
 from evil_jarvis.tts import build_speaker
@@ -28,7 +30,9 @@ def playlist():
     player.play.side_effect = lambda *_: clock.advance(1)
     settings = IdleSettings(sounds=("a.wav", "b.wav", "c.wav"))
     clips = tuple(np.full(100, (i + 1) / 10, dtype=np.float32) for i in range(3))
-    idle = IdleSounds(settings, clips, player, clock=clock, rng=random.Random(7), sleep=clock.advance)
+    idle = IdleSounds(
+        settings, clips, player, clock=clock, rng=random.Random(7), sleep=clock.advance
+    )
     return idle, player, clock
 
 
@@ -68,7 +72,7 @@ def test_idle_playlist_never_repeats_a_clip_consecutively(playlist):
         idle.next_action()()
     selected = [float(call.args[0][0]) for call in player.play.call_args_list]
     assert len(set(selected)) == 3
-    assert all(a != b for a, b in zip(selected, selected[1:], strict=False))
+    assert all(a != b for a, b in pairwise(selected))
     assert all(call.args[1] == PLAYBACK_RATE for call in player.play.call_args_list)
 
 
@@ -76,7 +80,10 @@ def test_one_clip_persona_can_still_play_idle(playlist):
     _, player, clock = playlist
     idle = IdleSounds(
         IdleSettings(sounds=("only.wav",), after_seconds=0),
-        (np.zeros(10, dtype=np.float32),), player, clock=clock, sleep=lambda _: None,
+        (np.zeros(10, dtype=np.float32),),
+        player,
+        clock=clock,
+        sleep=lambda _: None,
     )
     idle.next_action()()
     clock.advance(100)
@@ -113,3 +120,28 @@ def test_reply_voices_accept_the_same_player_as_idle_sounds():
         build_speaker("voice", voices_by_language={"en": "other"}, player=player)
     assert len(piper.call_args_list) == 2
     assert all(call.kwargs["player"] is player for call in piper.call_args_list)
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_voice_loop_connects_idle_only_to_capture(enabled):
+    recorder, idle = Mock(), Mock()
+    recorder.capture.side_effect = [None, KeyboardInterrupt]
+    transcriber, responder, speaker, telemetry = Mock(), Mock(), Mock(), Mock()
+    with pytest.raises(KeyboardInterrupt):
+        run_voice_loop(
+            recorder,
+            transcriber,
+            responder,
+            speaker,
+            telemetry=telemetry,
+            idle=idle if enabled else None,
+        )
+    assert recorder.capture.call_count == 2
+    for call in recorder.capture.call_args_list:
+        assert call.kwargs == (
+            {"on_listening": idle.reset, "on_idle": idle.next_action} if enabled else {}
+        )
+    idle.next_action.assert_not_called()
+    transcriber.transcribe.assert_not_called()
+    responder.reply.assert_not_called()
+    speaker.speak.assert_not_called()

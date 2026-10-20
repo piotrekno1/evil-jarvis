@@ -25,8 +25,12 @@ def test_write_wav_creates_mono_pcm_file(tmp_path):
 
 def fake_recorder(monkeypatch, levels):
     config = DetectorConfig(
-        frame_ms=20, speech_start_ms=40, silence_ms=40, min_speech_ms=40,
-        preroll_ms=20, calibration_seconds=0,
+        frame_ms=20,
+        speech_start_ms=40,
+        silence_ms=40,
+        min_speech_ms=40,
+        preroll_ms=20,
+        calibration_seconds=0,
     )
     recorder = VoiceActivityRecorder(config)
     recorder._threshold = 0.1

@@ -304,12 +304,12 @@ def run(args, persona: Persona, telemetry) -> None:
     asr_handle = telemetry.register_transcriber(
         *stt.telemetry_model(args.stt_engine, args.whisper_model)
     )
-    idle = (
-        build_idle_sounds(persona, player, args.voice_effect)
-        if not args.no_idle and player is not None
-        else None
-    )
     try:
+        idle = (
+            build_idle_sounds(persona, player, args.voice_effect)
+            if not args.no_idle and player is not None
+            else None
+        )
         run_voice_loop(
             recorder,
             transcriber,

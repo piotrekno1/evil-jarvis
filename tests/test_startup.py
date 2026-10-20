@@ -56,6 +56,18 @@ def test_banner_without_speech():
     assert "off (replies printed)" in text
 
 
+def test_banner_describes_idle_and_flag_disables_it():
+    assert "3 sounds after 30 s quiet" in startup.banner(args_for(), load_persona("clown"), "off")
+    assert args_for("--no-idle").no_idle
+
+
+@pytest.mark.parametrize("flag", ["--no-idle", "--no-speech", "--text-only"])
+def test_banner_omits_disabled_idle(flag):
+    assert "microphone briefly paused" not in startup.banner(
+        args_for(flag), load_persona("clown"), "off"
+    )
+
+
 @pytest.mark.parametrize(
     ("module", "function", "returns", "expected"),
     [
