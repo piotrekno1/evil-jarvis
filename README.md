@@ -7,10 +7,12 @@ speaker inside it, and visitors can have a conversation with it. Everything runs
 on your own machine, so there is no cloud service or account to set up.
 
 Characters live in TOML files where you set the personality, example lines,
-voice and effects. Two come built in, and both speak Polish and English:
+voice and effects. Four come built in, and all speak Polish and English:
 
 - `clown`: a creepy clown
 - `jarvis`: a sinister smart-home assistant
+- `pani-kraka`: a quarrelsome witch trapped in a crow, bargaining for shiny things (Polish by default)
+- `madame-nevermore`: an elegant witch-crow offering eerie, whimsical fortunes (English by default)
 
 ## Requirements
 
@@ -56,6 +58,15 @@ Pick another character:
 
 ```bash
 uv run evil-jarvis --persona jarvis
+```
+
+Try either witch-crow with `--persona pani-kraka` or `--persona madame-nevermore`.
+Both use clean voices with plain delivery: Pani Kraka speaks a little faster,
+and Madame Nevermore takes her time. Download the selected persona's voices first:
+
+```bash
+uv run evil-jarvis --persona pani-kraka --language auto --download
+uv run evil-jarvis --persona madame-nevermore --language auto --download
 ```
 
 Answer in whichever language each visitor speaks, instead of only the
