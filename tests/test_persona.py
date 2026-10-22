@@ -8,7 +8,7 @@ import pytest
 import wildedge
 from click.testing import CliRunner
 
-from evil_jarvis import conversation, telemetry
+from evil_jarvis import conversation
 from evil_jarvis.cli import main, parse_args
 from evil_jarvis.persona import builtin_dir, builtin_personas, load_persona
 from evil_jarvis.tts.per_language import PerLanguageSpeaker
@@ -270,10 +270,17 @@ def test_reply_language_reaches_the_speaker():
 
     speaker = Recorder()
     with mock.patch.dict(os.environ, {}, clear=True):
-        quiet = telemetry.Telemetry(wildedge.WildEdge())
-    with quiet.exchange() as exchange:
+        quiet = wildedge.WildEdge()
+    with conversation.exchange_trace(quiet, Responder()) as exchange:
         conversation.respond_and_speak(
-            "Hi", "en", Responder(), speaker, telemetry=quiet, exchange=exchange, started=0.0
+            "Hi",
+            "en",
+            Responder(),
+            speaker,
+            client=quiet,
+            capture=False,
+            exchange=exchange,
+            started=0.0,
         )
     assert speaker.spoken == [("Hello.", "en")]
 
@@ -345,7 +352,7 @@ def test_bad_persona_is_a_usage_error():
     assert "Unknown persona" in result.output
 
 
-@pytest.mark.parametrize("option", ["--persona", "--wildedge-capture", "--voice-effect"])
+@pytest.mark.parametrize("option", ["--persona", "--voice-effect"])
 def test_help_lists_options(option):
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0

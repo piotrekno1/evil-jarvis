@@ -201,7 +201,7 @@ def test_recycled_phrase_gets_a_retry_with_conversation_feedback(remembering):
         responder.reply("Masz cukierki?", "pl") == "Częstuj się. Papierek sam wybiera właściciela."
     )
     assert responder.last_reply_info["attempts"] == 2
-    assert responder.last_reply_info["rejections"] == ["reuses phrase 'tylko dla odwaznych'"]
+    assert responder.last_reply_info["rejections"] == "reuses phrase 'tylko dla odwaznych'"
     retry_messages, _ = responder._model.calls[-1]
     first_messages, _ = responder._model.calls[0]
     assert "Kontynuuj temat ostatniej wypowiedzi" in retry_messages[0]["content"]
@@ -222,13 +222,25 @@ def test_stage_direction_retry_keeps_the_visitors_topic(remembering):
     assert responder.reply("Opowiedz mi o tej sztuczce.", "pl") == (
         "Podrzucam jajko, a ono znika. Hehe, z kapelusza wyciągam kurę."
     )
-    assert responder.last_reply_info["rejections"] == [
-        "repeats an earlier reply",
-        "stage direction",
-    ]
+    assert responder.last_reply_info["rejections"] == "repeats an earlier reply | stage direction"
     repeated_messages, _ = responder._model.calls[-2]
     stage_messages, _ = responder._model.calls[-1]
     assert "Kontynuuj temat ostatniej wypowiedzi" in repeated_messages[0]["content"]
     assert "Poprzednia propozycja zawiera didaskalia" in stage_messages[0]["content"]
     assert "Kontynuuj temat ostatniej wypowiedzi" in stage_messages[0]["content"]
     assert "Opowiedz o tym samym" in stage_messages[0]["content"]
+
+
+def test_conversation_id_changes_after_quiet(responder_with):
+    now = [0.0]
+    responder = responder_with(["Mam jeden.", "Mam dwa.", "Mam trzy."], clock=lambda: now[0])
+    first = responder.upcoming_conversation_id()
+    responder.reply("Masz cukierka?", language="pl")
+    now[0] = 30.0
+    assert responder.upcoming_conversation_id() == first
+    responder.reply("A ile masz lat?", language="pl")
+    now[0] = 200.0
+    second = responder.upcoming_conversation_id()
+    assert second != first
+    responder.reply("Kim jesteś?", language="pl")
+    assert responder._conversation_id == second

@@ -323,20 +323,19 @@ notice for a particular operator or venue.
 
 ### Telemetry
 
-Off by default. To send metrics to [WildEdge](https://wildedge.dev), set
-`WILDEDGE_DSN` in `.env`:
+[WildEdge](https://wildedge.dev) telemetry is opt-in, in two steps:
 
-```bash
-echo 'WILDEDGE_DSN=...' > .env
-```
+| Setting (in `.env`) | Sends |
+|---|---|
+| none (default) | nothing |
+| `WILDEDGE_DSN=...` | timings, token counts, model metadata, outcomes and errors |
+| also `WILDEDGE_ATTACHMENTS_ENABLED=1` | also the visitor's words and the character's replies, as text |
 
-By default it sends only timings, token counts, model metadata and outcomes.
-`--wildedge-capture text` also uploads transcripts and replies, and `audio` also
-uploads voice clips. Text capture includes the prompts and conversation context
-sent to the model, including content from earlier turns. Diagnostic errors may
-also be sent. The SDK may queue unsent events on disk and retry on a later run;
-uploaded data is subject to the configured service's retention and access settings.
-Disabling future capture does not delete previously queued or uploaded data.
+Audio is never sent.
+
+The SDK may keep unsent events on disk and send them on a later run. Turning
+capture off does not delete data already queued or sent. Sent data follows the
+WildEdge project's retention and access settings.
 
 ## License
 

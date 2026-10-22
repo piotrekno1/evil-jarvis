@@ -302,7 +302,7 @@ requires-dist = [
     { name = "piper-tts", marker = "extra == 'voice'", specifier = ">=1.8.0" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "sounddevice", specifier = ">=0.4.7" },
-    { name = "wildedge-sdk", specifier = ">=0.2.1" },
+    { name = "wildedge-sdk", git = "https://github.com/wild-edge/wildedge-python?rev=db8d8593a8237f0278ca9ba4f3c95fd03060c59b" },
 ]
 provides-extras = ["models", "voice", "asr-bench"]
 
@@ -1291,9 +1291,5 @@ wheels = [
 
 [[package]]
 name = "wildedge-sdk"
-version = "0.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/87/2d/e233d9f649e13b55b44d3214409105fbf4d98656d3826b4a3bab2055d5c0/wildedge_sdk-0.2.2.tar.gz", hash = "sha256:3f18e44d7ed22b50482c33d1f397d6a045351bb41e57b4ad0b5e824709efeef1", size = 186103, upload-time = "2026-09-30T10:07:39.498Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/d9/663d32d6a1449b40a4edb8e7fb7b473dd766a641de619ff6c11c61a19f5c/wildedge_sdk-0.2.2-py3-none-any.whl", hash = "sha256:a38b7817f37262fbe967f883fe163f69dc97c9b54a8a4bcf36a0a9171f0a6a68", size = 129958, upload-time = "2026-09-30T10:07:38.029Z" },
-]
+version = "0.3.0"
+source = { git = "https://github.com/wild-edge/wildedge-python?rev=db8d8593a8237f0278ca9ba4f3c95fd03060c59b#db8d8593a8237f0278ca9ba4f3c95fd03060c59b" }

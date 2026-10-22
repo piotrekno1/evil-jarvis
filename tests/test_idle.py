@@ -126,14 +126,15 @@ def test_reply_voices_accept_the_same_player_as_idle_sounds():
 def test_voice_loop_connects_idle_only_to_capture(enabled):
     recorder, idle = Mock(), Mock()
     recorder.capture.side_effect = [None, KeyboardInterrupt]
-    transcriber, responder, speaker, telemetry = Mock(), Mock(), Mock(), Mock()
+    transcriber, responder, speaker, client = Mock(), Mock(), Mock(), Mock()
     with pytest.raises(KeyboardInterrupt):
         run_voice_loop(
             recorder,
             transcriber,
             responder,
             speaker,
-            telemetry=telemetry,
+            client=client,
+            capture=False,
             idle=idle if enabled else None,
         )
     assert recorder.capture.call_count == 2

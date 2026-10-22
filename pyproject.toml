@@ -14,7 +14,7 @@ dependencies = [
   "numpy>=1.26",
   "python-dotenv>=1.0",
   "sounddevice>=0.4.7",
-  "wildedge-sdk>=0.2.1",
+  "wildedge-sdk>=0.3.0",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +45,11 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "evil_jarvis.persona" = ["builtin/*.toml", "builtin/*/*.toml", "builtin/*/assets/*"]
+
+# wildedge-sdk 0.3.0 is not on PyPI yet: use the release branch commit.
+# Remove this once 0.3.0 is published.
+[tool.uv.sources]
+wildedge-sdk = { git = "https://github.com/wild-edge/wildedge-python", rev = "db8d8593a8237f0278ca9ba4f3c95fd03060c59b" }
 
 [dependency-groups]
 dev = [

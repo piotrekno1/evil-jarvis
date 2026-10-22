@@ -9,7 +9,6 @@ import uuid
 from pathlib import Path
 
 from evil_jarvis.persona import DEFAULT_PERSONA, Persona, load_persona
-from evil_jarvis.telemetry import Telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +25,6 @@ class LlamaResponder:
     _last_heard: float | None = None
     _conversation_id: str | None = None
     _next_conversation_id: str | None = None
-    _telemetry: Telemetry | None = None
-    _llm_handle = None
     _persona: Persona | None = None
     last_reply_info: dict | None = None
 
@@ -36,7 +33,6 @@ class LlamaResponder:
         model_path: str,
         persona: Persona | None = None,
         memory_seconds: float = 90.0,
-        telemetry: Telemetry | None = None,
     ):
         self._persona = persona
         self.memory_seconds = memory_seconds
@@ -47,7 +43,6 @@ class LlamaResponder:
             from llama_cpp import Llama
         except ImportError as exc:
             raise RuntimeError("Install the 'models' extra to use the local LLM") from exc
-        started = time.perf_counter()
         self._model = Llama(
             model_path=str(path),
             n_ctx=2048,
@@ -55,10 +50,6 @@ class LlamaResponder:
             n_gpu_layers=-1,  # llama-cpp-python defaults to CPU only; offload all layers to Metal
             verbose=False,
         )
-        if telemetry is not None:
-            self._telemetry = telemetry
-            load_ms = round((time.perf_counter() - started) * 1000)
-            self._llm_handle = telemetry.register_llm(self._model, load_ms)
         self._disable_thinking = "qwen3" in path.name.lower()
 
     @property
@@ -126,31 +117,6 @@ class LlamaResponder:
             ]
         return messages
 
-    def _complete(self, messages: list[dict[str, str]], **params) -> dict:
-        """Run one chat completion and report it to telemetry."""
-        if self._llm_handle is None:
-            return self._model.create_chat_completion(messages=messages, **params)
-        started = time.perf_counter()
-        try:
-            result = self._model.create_chat_completion(messages=messages, **params)
-        except Exception as exc:
-            self._telemetry.track_generation(
-                self._llm_handle,
-                duration_ms=round((time.perf_counter() - started) * 1000),
-                messages=messages,
-                params=params,
-                error=exc,
-            )
-            raise
-        self._telemetry.track_generation(
-            self._llm_handle,
-            duration_ms=round((time.perf_counter() - started) * 1000),
-            messages=messages,
-            params=params,
-            result=result,
-        )
-        return result
-
     def _note(self, **details) -> dict:
         """Record how the current reply was made (for telemetry span attributes)."""
         if self.last_reply_info is None:
@@ -182,10 +148,12 @@ class LlamaResponder:
 
         rejections: list[str] = []
         repairs: list[str] = []
-        info = self._note(source="model", rejections=rejections)
+        info = self._note(source="model")
         for attempt in range(1, profile.attempts + 1):
             info["attempts"] = attempt
-            result = self._complete(messages=messages, **profile.generation_params)
+            result = self._model.create_chat_completion(
+                messages=messages, **profile.generation_params
+            )
             content = str(result["choices"][0]["message"]["content"])
             reply = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
             # Markdown bold is emphasis, not a stage direction: keep the words.
@@ -198,6 +166,7 @@ class LlamaResponder:
                 return reply
             logger.info("Rejected model reply (%s): %r", problem, reply[:80])
             rejections.append(problem)
+            info["rejections"] = " | ".join(rejections)
             polish = (language or self.persona.language) == "pl"
             if problem.startswith(("reuses phrase", "repeats an earlier reply")):
                 repair = (

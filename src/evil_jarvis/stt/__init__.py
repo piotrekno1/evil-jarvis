@@ -73,8 +73,3 @@ def build_transcriber(
         return MlxWhisperTranscriber(str(model), language)
 
     return FasterWhisperTranscriber(str(model), language, topic_hint=topic_hint)
-
-
-def telemetry_model(engine: str, model: str | Path) -> tuple[str, str]:
-    """WildEdge model id and format."""
-    return Path(model).name, "mlx" if engine == "mlx" else "ctranslate2"
