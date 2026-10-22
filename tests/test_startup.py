@@ -92,13 +92,13 @@ def test_banner_names_the_hardware(module, function, returns, expected):
 @pytest.mark.parametrize(
     ("env", "capture", "expected"),
     [
-        ({}, "off", "set WILDEDGE_DSN"),
+        ({}, False, "set WILDEDGE_DSN"),
         (
             {"WILDEDGE_DSN": "https://s@example.invalid/k"},
-            "text",
-            "transcripts and replies are uploaded",
+            True,
+            "timings and text, no audio",
         ),
-        ({"WILDEDGE_DSN": "https://s@example.invalid/k"}, "off", "timings and metadata only"),
+        ({"WILDEDGE_DSN": "https://s@example.invalid/k"}, False, "timings only, no text or audio"),
     ],
 )
 def test_telemetry_line(env, capture, expected):

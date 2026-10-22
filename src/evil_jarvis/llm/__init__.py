@@ -22,14 +22,8 @@ class Responder(Protocol):
     def reply(self, text: str, language: str | None = None) -> str: ...
 
 
-def build_responder(model_path: str, persona, memory_seconds: float, telemetry):
-
-    return LlamaResponder(
-        model_path,
-        persona=persona,
-        memory_seconds=memory_seconds,
-        telemetry=telemetry,
-    )
+def build_responder(model_path: str, persona, memory_seconds: float):
+    return LlamaResponder(model_path, persona=persona, memory_seconds=memory_seconds)
 
 
 def gpu_offload_supported() -> bool | None:

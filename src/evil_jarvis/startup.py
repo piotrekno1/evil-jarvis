@@ -220,12 +220,9 @@ def banner(args, persona: Persona, telemetry_line: str) -> str:
     return "\n".join(["", f"  🎪  {title}", *(f"  {name:8}: {value}" for name, value in rows), ""])
 
 
-def telemetry_summary(capture: str) -> str:
+def telemetry_summary(capture: bool) -> str:
     if not os.environ.get("WILDEDGE_DSN"):
         return "off (set WILDEDGE_DSN in .env to send timings to WildEdge)"
-    if capture == "off":
-        return "WildEdge (timings and metadata only)"
-    what = (
-        "transcripts, replies and voice clips" if capture == "audio" else "transcripts and replies"
-    )
-    return f"WildEdge, capture on: {what} are uploaded"
+    if not capture:
+        return "WildEdge: timings only, no text or audio"
+    return "WildEdge: timings and text, no audio"

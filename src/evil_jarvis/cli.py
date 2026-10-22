@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from types import SimpleNamespace
 
 import click
 import wildedge
+from wildedge.settings import read_client_env
 
 from evil_jarvis import __version__, stt
 from evil_jarvis.conversation import run_text_loop, run_voice_loop
@@ -26,7 +26,6 @@ from evil_jarvis.startup import (
     missing_requirements,
     telemetry_summary,
 )
-from evil_jarvis.telemetry import CAPTURE_LEVELS, Telemetry
 from evil_jarvis.tts import (
     DEFAULT_VOICE,
     EFFECT_NAMES,
@@ -143,14 +142,6 @@ def parse_device(value: str | None) -> int | str | None:
 @click.option("--threshold-multiplier", type=float, default=3.0, show_default=True)
 # Telemetry and startup
 @click.option(
-    "--wildedge-capture",
-    type=click.Choice(CAPTURE_LEVELS),
-    default="off",
-    show_default=True,
-    help="WildEdge upload of visitor content (needs WILDEDGE_DSN): off (timings and metadata "
-    "only), text (transcripts and replies), audio (also voice clips).",
-)
-@click.option(
     "--env-file",
     type=click.Path(dir_okay=False, path_type=Path),
     default=ENV_FILE,
@@ -167,9 +158,9 @@ def main(**options) -> None:
     args = SimpleNamespace(**options)
     persona = resolve(args)
     load_env_file(args.env_file)
-    if args.wildedge_capture != "off" and not os.environ.get("WILDEDGE_DSN"):
-        raise click.UsageError("--wildedge-capture needs WILDEDGE_DSN to be set")
-    click.echo(banner(args, persona, telemetry_summary(args.wildedge_capture)))
+    # Opt-in: send what the visitor said and the reply (WILDEDGE_ATTACHMENTS_ENABLED=1).
+    capture = read_client_env().attachments_enabled is True
+    click.echo(banner(args, persona, telemetry_summary(capture)))
     if args.download:
         fetch_missing(args)
     problems = missing_requirements(args)
@@ -188,24 +179,23 @@ def main(**options) -> None:
     )
     logger.info("Persona: %s (%s)", persona.name, persona.source)
 
-    # Before any model is created: the onnx integration (Piper) patches at load
-    # time. attachments_enabled is explicit so WILDEDGE_ATTACHMENTS_ENABLED in
-    # the environment can never turn uploads on by itself.
-    client = wildedge.init(
-        integrations=[] if args.no_speech else ["onnx"],
-        app_version=__version__,
-        attachments_enabled=args.wildedge_capture != "off",
-    )
-    telemetry = Telemetry(client, args.wildedge_capture)
+    # Must run before the models load. Integrations send timings, never text or audio.
+    integrations = ["llama_cpp"]
+    if not args.no_speech:
+        integrations.append("onnx")
+    if not args.text_only:
+        integrations.append("mlx_whisper" if args.stt_engine == "mlx" else "faster_whisper")
+    client = wildedge.init(integrations=integrations, app_version=__version__)
 
     try:
-        run(args, persona, telemetry)
+        run(args, persona, client, capture)
     except KeyboardInterrupt:
         click.echo(f"\n{persona.exit_message}")
     except (RuntimeError, ValueError) as exc:
         raise click.UsageError(str(exc)) from exc
     finally:
-        telemetry.close()
+        # Under the 2 s Ctrl-C watchdog. Unsent events go out on the next start.
+        client.close(timeout=1.5)
 
 
 def apply_persona(args, persona: Persona) -> None:
@@ -259,8 +249,8 @@ def parse_args(argv=()) -> SimpleNamespace:
     return args
 
 
-def run(args, persona: Persona, telemetry) -> None:
-    responder = build_responder(args.llm_model, persona, args.memory_seconds, telemetry)
+def run(args, persona: Persona, client: wildedge.WildEdge, capture: bool) -> None:
+    responder = build_responder(args.llm_model, persona, args.memory_seconds)
     player = AudioPlayer(parse_device(args.output_device)) if not args.no_speech else None
     speaker = (
         SilentSpeaker()
@@ -282,7 +272,7 @@ def run(args, persona: Persona, telemetry) -> None:
     )
     if args.text_only:
         try:
-            run_text_loop(responder, speaker, telemetry, language=args.language)
+            run_text_loop(responder, speaker, client, capture, language=args.language)
         finally:
             if player is not None:
                 player.close()
@@ -301,9 +291,6 @@ def run(args, persona: Persona, telemetry) -> None:
         ),
         input_device=parse_device(args.input_device),
     )
-    asr_handle = telemetry.register_transcriber(
-        *stt.telemetry_model(args.stt_engine, args.whisper_model)
-    )
     try:
         idle = (
             build_idle_sounds(persona, player, args.voice_effect)
@@ -315,8 +302,8 @@ def run(args, persona: Persona, telemetry) -> None:
             transcriber,
             responder,
             speaker,
-            telemetry=telemetry,
-            asr_handle=asr_handle,
+            client=client,
+            capture=capture,
             cooldown_seconds=args.cooldown_seconds,
             idle=idle,
         )
