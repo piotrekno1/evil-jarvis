@@ -76,3 +76,12 @@ def test_model_receives_playback_instructions_and_can_return_valid_cues(
 
 def test_persona_without_triggers_gets_no_playback_prompt():
     assert load_persona("jarvis").vocalization_rule("en") == ""
+
+
+def test_clown_playback_rule_defers_to_profile_laugh_frequency():
+    persona = load_persona("clown")
+    profile = persona.profile("pl")
+    rule = persona.vocalization_rule("pl")
+    assert "Często dodawaj krótkie „hehe”" in profile.system_prompt
+    assert "częstotliwość określa opis postaci" in rule
+    assert "zwykle je pomijaj" not in rule

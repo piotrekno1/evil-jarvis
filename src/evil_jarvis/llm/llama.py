@@ -181,6 +181,7 @@ class LlamaResponder:
         previous = tuple(answer for _, answer in history)
 
         rejections: list[str] = []
+        repairs: list[str] = []
         info = self._note(source="model", rejections=rejections)
         for attempt in range(1, profile.attempts + 1):
             info["attempts"] = attempt
@@ -197,18 +198,33 @@ class LlamaResponder:
                 return reply
             logger.info("Rejected model reply (%s): %r", problem, reply[:80])
             rejections.append(problem)
+            polish = (language or self.persona.language) == "pl"
             if problem.startswith(("reuses phrase", "repeats an earlier reply")):
                 repair = (
                     "Poprzednia propozycja powtarza wcześniejszą odpowiedź. "
-                    "Odpowiedz wprost na ostatnią wypowiedź gościa, używając nowego pomysłu "
-                    "i innych sformułowań. Nie odtwarzaj poprzedniej puenty."
-                    if (language or self.persona.language) == "pl"
-                    else "Your last proposal repeats an earlier reply. Address the visitor's "
-                    "latest statement with a new idea and different wording. "
-                    "Do not recycle an earlier punchline."
+                    "Kontynuuj temat ostatniej wypowiedzi gościa, ale zacznij inaczej "
+                    "i nie powtarzaj wcześniejszej puenty."
+                    if polish
+                    else "Your last proposal repeats an earlier reply. Continue the visitor's "
+                    "latest topic, but use a different opening and do not repeat the punchline."
                 )
+            elif problem == "stage direction":
+                repair = (
+                    "Poprzednia propozycja zawiera didaskalia. Opowiedz o tym samym "
+                    "temacie zwykłymi słowami do wypowiedzenia. Bez gwiazdek, nawiasów, "
+                    "opisów gestów i zapisów dźwięku w nawiasach."
+                    if polish
+                    else "Your last proposal contains stage directions. Continue the same "
+                    "topic in spoken dialogue. Do not use asterisks, parentheses, gesture "
+                    "descriptions or written sound effects."
+                )
+            else:
+                repair = None
+            if repair and repair not in repairs:
+                repairs.append(repair)
+            if repairs:
                 messages = [
-                    {"role": "system", "content": f"{system_prompt}\n{repair}"},
+                    {"role": "system", "content": f"{system_prompt}\n" + "\n".join(repairs)},
                     *messages[1:],
                 ]
         logger.warning("No usable reply after %d attempts; staying silent", profile.attempts)

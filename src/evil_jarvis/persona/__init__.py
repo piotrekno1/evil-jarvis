@@ -141,15 +141,17 @@ class Persona:
         if (language or self.language) == "pl":
             return (
                 f"Dźwięk postaci: te dokładne hasła odtwarzają nagranie zamiast mowy: {cues}. "
-                "Możesz czasem wstawić jedno pasujące hasło w naturalnym miejscu odpowiedzi, "
-                "jako osobne słowo. Najwyżej jedno hasło na odpowiedź; zwykle je pomijaj. "
+                "Możesz wstawić jedno pasujące hasło w naturalnym miejscu odpowiedzi, "
+                "jako osobne słowo. Najwyżej jedno hasło na odpowiedź; częstotliwość "
+                "określa opis postaci. "
                 "Użyj pisowni z listy pasującej do języka rozmowy. Nie dodawaj nawiasów, "
                 "gwiazdek ani opisów dźwięku. Nie wyjaśniaj mechanizmu odtwarzania."
             )
         return (
             f"Character audio: these exact cues play a recording instead of speech: {cues}. "
-            "You may occasionally insert one suitable cue at a natural point in your reply "
-            "as a separate word. Use at most one cue per reply; omit it in most replies. "
+            "You may insert one suitable cue at a natural point in your reply "
+            "as a separate word. Use at most one cue per reply; follow the character's "
+            "guidance on how often to use it. "
             "Choose a listed spelling appropriate to the conversation language. Do not add "
             "brackets, asterisks or sound descriptions. Do not explain the playback mechanism."
         )

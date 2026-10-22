@@ -204,5 +204,31 @@ def test_recycled_phrase_gets_a_retry_with_conversation_feedback(remembering):
     assert responder.last_reply_info["rejections"] == ["reuses phrase 'tylko dla odwaznych'"]
     retry_messages, _ = responder._model.calls[-1]
     first_messages, _ = responder._model.calls[0]
-    assert "używając nowego pomysłu" in retry_messages[0]["content"]
-    assert "używając nowego pomysłu" not in first_messages[0]["content"]
+    assert "Kontynuuj temat ostatniej wypowiedzi" in retry_messages[0]["content"]
+    assert "Kontynuuj temat ostatniej wypowiedzi" not in first_messages[0]["content"]
+
+
+def test_stage_direction_retry_keeps_the_visitors_topic(remembering):
+    responder = remembering(
+        [
+            "Oj tam, oj tam. Znam sztuczkę z jajkiem.",
+            "Oj tam, oj tam. Kiedyś jajko wymknęło mi się z rąk.",
+            "Oto ona: *unosi jajko w powietrzu* i rzuca je na ziemię.",
+            "Podrzucam jajko, a ono znika. Hehe, z kapelusza wyciągam kurę.",
+        ]
+    )
+    responder.reply("Znasz jakąś sztuczkę?", "pl")
+    responder.clock.now += 1
+    assert responder.reply("Opowiedz mi o tej sztuczce.", "pl") == (
+        "Podrzucam jajko, a ono znika. Hehe, z kapelusza wyciągam kurę."
+    )
+    assert responder.last_reply_info["rejections"] == [
+        "repeats an earlier reply",
+        "stage direction",
+    ]
+    repeated_messages, _ = responder._model.calls[-2]
+    stage_messages, _ = responder._model.calls[-1]
+    assert "Kontynuuj temat ostatniej wypowiedzi" in repeated_messages[0]["content"]
+    assert "Poprzednia propozycja zawiera didaskalia" in stage_messages[0]["content"]
+    assert "Kontynuuj temat ostatniej wypowiedzi" in stage_messages[0]["content"]
+    assert "Opowiedz o tym samym" in stage_messages[0]["content"]
