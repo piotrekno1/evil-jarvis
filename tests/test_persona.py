@@ -237,7 +237,7 @@ def test_persona_drives_prompt_params_and_labels(responder_with):
     assert responder.reply("Otwórz okno.", language="pl") == "Otworzę. Ale tylko raz."
     messages, options = responder._model.calls[0]
     assert "Jarvisem" in messages[0]["content"]
-    assert options["max_tokens"] == 60
+    assert options["max_tokens"] == 96
 
 
 def test_default_profile_gets_a_language_rule(responder_with):
